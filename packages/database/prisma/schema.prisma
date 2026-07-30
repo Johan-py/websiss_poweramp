@@ -1,0 +1,396 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"] // y agrega "multiSchema" si activas el bloque de auth.users abajo
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgcrypto]
+  // schemas  = ["public", "auth"] // descomenta junto con "multiSchema" arriba si usas el bloque opcional de auth.users
+}
+
+// ─── OPCIONAL PERO RECOMENDADO ───────────────────────────
+// Si quieres una FK real de Perfil -> auth.users (en vez de un UUID libre sin relación),
+// descomenta esto y el datasource.schemas + generator.previewFeatures de arriba.
+// En Supabase, auth.users ya existe — Prisma solo la "adopta" como modelo de solo lectura.
+// En local, deberás crear una tabla mínima auth.users (id uuid pk, email text) vía SQL manual
+// antes de correr `prisma migrate dev`, ya que Prisma no puede crear tablas fuera de su control total.
+//
+// model AuthUser {
+//   id     String  @id @db.Uuid
+//   email  String?
+//   perfil Perfil?
+//
+//   @@map("users")
+//   @@schema("auth")
+// }
+
+// ─── Perfil (1:1 con auth.users de Supabase) ─────────────
+model Perfil {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique
+  nombre    String
+  apellido  String
+  cedula    String   @unique
+  telefono  String?
+  direccion String?
+  avatarUrl String?  @map("avatar_url")
+  rol       Rol      @default(ESTUDIANTE)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // authUser AuthUser? @relation(fields: [id], references: [id]) // solo si activas el bloque opcional de arriba
+
+  estudiante Estudiante?
+  docente    Docente?
+  bitacora   Auditoria[]
+
+  @@map("perfiles")
+}
+
+enum Rol {
+  ADMIN
+  COORDINADOR
+  DOCENTE
+  ESTUDIANTE
+}
+
+// ─── Estudiante ──────────────────────────────────────────
+model Estudiante {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfilId         String   @unique @map("perfil_id") @db.Uuid
+  carreraId        String   @map("carrera_id") @db.Uuid
+  codigoEstudiante String   @unique @map("codigo_estudiante")
+  fechaIngreso     DateTime @default(now()) @map("fecha_ingreso")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  perfil        Perfil        @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  carrera       Carrera       @relation(fields: [carreraId], references: [id])
+  inscripciones Inscripcion[]
+  notas         Nota[]
+  pagos         Pago[]
+
+  @@map("estudiantes")
+}
+
+// ─── Docente ─────────────────────────────────────────────
+model Docente {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfilId      String   @unique @map("perfil_id") @db.Uuid
+  codigoDocente String   @unique @map("codigo_docente")
+  especialidad  String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  perfil            Perfil            @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  ofertasAcademicas OfertaAcademica[]
+
+  @@map("docentes")
+}
+
+// ─── Carrera ─────────────────────────────────────────────
+model Carrera {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo            String    @unique
+  nombre            String
+  descripcion       String?
+  modalidad         Modalidad @default(PRESENCIAL)
+  duracionSemestres Int       @map("duracion_semestres")
+  activo            Boolean   @default(true)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  estudiantes Estudiante[]
+  materias    Materia[]
+
+  @@map("carreras")
+}
+
+enum Modalidad {
+  PRESENCIAL
+  SEMIPRESENCIAL
+  VIRTUAL
+}
+
+// ─── Materia ─────────────────────────────────────────────
+model Materia {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  carreraId      String   @map("carrera_id") @db.Uuid
+  codigo         String   @unique
+  nombre         String
+  descripcion    String?
+  creditos       Int
+  horasTeoricas  Int      @default(0) @map("horas_teoricas")
+  horasPracticas Int      @default(0) @map("horas_practicas")
+  ciclo          Int
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  carrera           Carrera           @relation(fields: [carreraId], references: [id])
+  ofertasAcademicas OfertaAcademica[]
+  requisitos        Prerrequisito[]   @relation("PrerrequisitoMateria")
+  requisitoDe       Prerrequisito[]   @relation("PrerrequisitoRequisito")
+
+  @@map("materias")
+}
+
+// ─── Prerrequisito (N:N Materia-Materia) ────────────────
+model Prerrequisito {
+  materiaId          String @map("materia_id") @db.Uuid
+  materiaRequisitoId String @map("materia_requisito_id") @db.Uuid
+
+  materia    Materia @relation("PrerrequisitoMateria", fields: [materiaId], references: [id], onDelete: Cascade)
+  materiaReq Materia @relation("PrerrequisitoRequisito", fields: [materiaRequisitoId], references: [id], onDelete: Cascade)
+
+  @@id([materiaId, materiaRequisitoId]) // ya garantiza unicidad; se removió el @@unique duplicado
+  @@map("prerrequisitos")
+}
+
+// ─── Periodo ─────────────────────────────────────────────
+model Periodo {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo      String   @unique
+  nombre      String
+  fechaInicio DateTime @map("fecha_inicio")
+  fechaFin    DateTime @map("fecha_fin")
+  activo      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  ofertasAcademicas OfertaAcademica[]
+  eventosCalendario CalendarioAcademico[]
+  pagos             Pago[]
+
+  @@map("periodos")
+}
+
+// ─── Aula ────────────────────────────────────────────────
+model Aula {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo     String   @unique
+  nombre     String
+  capacidad  Int
+  tipo       TipoAula @default(AULA)
+  ubicacion  String?
+  disponible Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  ofertasAcademicas OfertaAcademica[]
+
+  @@map("aulas")
+}
+
+enum TipoAula {
+  AULA
+  LABORATORIO
+  TALLER
+  AUDITORIO
+}
+
+// ─── OfertaAcademica ─────────────────────────────────────
+model OfertaAcademica {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materiaId      String    @map("materia_id") @db.Uuid
+  docenteId      String    @map("docente_id") @db.Uuid
+  aulaId         String?   @map("aula_id") @db.Uuid // opcional por modalidad VIRTUAL; hazlo obligatorio si prefieres el ER original
+  periodoId      String    @map("periodo_id") @db.Uuid
+  cupoMaximo     Int       @default(30) @map("cupo_maximo")
+  cupoDisponible Int       @default(30) @map("cupo_disponible")
+  seccion        String    @default("A")
+  horario        Json?     // { "dia": "LUNES", "hora_inicio": "07:00", "hora_fin": "08:30" }
+  modalidad      Modalidad @default(PRESENCIAL)
+  activo         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  materia       Materia           @relation(fields: [materiaId], references: [id])
+  docente       Docente           @relation(fields: [docenteId], references: [id])
+  aula          Aula?             @relation(fields: [aulaId], references: [id])
+  periodo       Periodo           @relation(fields: [periodoId], references: [id])
+  recursos      RecursoMateria[]
+  evaluaciones  Evaluacion[]
+  inscripciones Inscripcion[]
+
+  @@map("ofertas_academicas")
+}
+
+// ─── RecursoMateria ──────────────────────────────────────
+model RecursoMateria {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ofertaId    String      @map("oferta_id") @db.Uuid
+  titulo      String
+  descripcion String?
+  tipoRecurso TipoRecurso @default(ARCHIVO) @map("tipo_recurso")
+  urlRecurso  String      @map("url_recurso")
+  publicado   Boolean     @default(false)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  oferta OfertaAcademica @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
+
+  @@map("recursos_materia")
+}
+
+enum TipoRecurso {
+  ARCHIVO
+  VIDEO
+  ENLACE
+  DOCUMENTO
+}
+
+// ─── Evaluacion ──────────────────────────────────────────
+model Evaluacion {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ofertaId       String         @map("oferta_id") @db.Uuid
+  titulo         String
+  descripcion    String?
+  tipoEvaluacion TipoEvaluacion @default(PARCIAL) @map("tipo_evaluacion")
+  peso           Decimal        @default(0) @db.Decimal(5, 2)
+  puntajeMaximo  Decimal        @default(20) @map("puntaje_maximo") @db.Decimal(5, 2)
+  fecha          DateTime?
+  publicada      Boolean        @default(false)
+  editableHasta  DateTime?      @map("editable_hasta")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  oferta OfertaAcademica @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
+  notas  Nota[]
+
+  @@map("evaluaciones")
+}
+
+enum TipoEvaluacion {
+  PARCIAL
+  FINAL
+  PRACTICA
+  TALLER
+  PROYECTO
+  EXAMEN_CORTO
+  RECUPERACION
+}
+
+// ─── Nota ────────────────────────────────────────────────
+model Nota {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  evaluacionId String   @map("evaluacion_id") @db.Uuid
+  estudianteId String   @map("estudiante_id") @db.Uuid
+  valor        Decimal  @db.Decimal(5, 2)
+  observacion  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  evaluacion Evaluacion @relation(fields: [evaluacionId], references: [id], onDelete: Cascade)
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluacionId, estudianteId])
+  @@map("notas")
+}
+
+// ─── Inscripcion (N:N Estudiante ⇄ OfertaAcademica) ─────
+model Inscripcion {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estudianteId     String            @map("estudiante_id") @db.Uuid
+  ofertaId         String            @map("oferta_id") @db.Uuid
+  estado           EstadoInscripcion @default(ACTIVA)
+  fechaInscripcion DateTime          @default(now()) @map("fecha_inscripcion")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  estudiante Estudiante      @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  oferta     OfertaAcademica @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
+
+  @@unique([estudianteId, ofertaId])
+  @@map("inscripciones")
+}
+
+enum EstadoInscripcion {
+  ACTIVA
+  CANCELADA
+  COMPLETADA
+  RETIRADA
+}
+
+// ─── Pago ────────────────────────────────────────────────
+model Pago {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estudianteId String     @map("estudiante_id") @db.Uuid
+  periodoId    String     @map("periodo_id") @db.Uuid
+  monto        Decimal    @db.Decimal(10, 2)
+  concepto     String?
+  referencia   String     @unique
+  metodoPago   MetodoPago @default(TRANSFERENCIA) @map("metodo_pago")
+  estado       EstadoPago @default(PENDIENTE)
+  fechaPago    DateTime?  @map("fecha_pago")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  periodo    Periodo    @relation(fields: [periodoId], references: [id])
+
+  @@map("pagos")
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA
+  CHEQUE
+}
+
+enum EstadoPago {
+  PENDIENTE
+  CONFIRMADO
+  RECHAZADO
+  ANULADO
+}
+
+// ─── CalendarioAcademico ─────────────────────────────────
+model CalendarioAcademico {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  periodoId   String     @map("periodo_id") @db.Uuid
+  titulo      String
+  descripcion String?
+  tipoEvento  TipoEvento @default(OTRO) @map("tipo_evento")
+  fechaInicio DateTime   @map("fecha_inicio")
+  fechaFin    DateTime?  @map("fecha_fin")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  periodo Periodo @relation(fields: [periodoId], references: [id])
+
+  @@map("calendario_academico")
+}
+
+enum TipoEvento {
+  INICIO_CLASES
+  FIN_CLASES
+  EXAMENES
+  VACACIONES
+  FERIADO
+  MATRICULA
+  OTRO
+}
+
+// ─── Auditoria ───────────────────────────────────────────
+model Auditoria {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfilId    String   @map("perfil_id") @db.Uuid
+  accion      String
+  entidad     String
+  entidadId   String?  @map("entidad_id")
+  detalle     Json?
+  direccionIp String?  @map("direccion_ip")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  perfil Perfil @relation(fields: [perfilId], references: [id])
+
+  @@index([perfilId])
+  @@index([entidad, entidadId])
+  @@map("auditoria")
+}

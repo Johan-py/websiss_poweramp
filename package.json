@@ -1,0 +1,20 @@
+{
+  "name": "websiss-poweramp",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "build": "pnpm -r run build",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @websiss/database run db:migrate",
+    "db:seed": "pnpm --filter @websiss/database run db:seed",
+    "db:studio": "pnpm --filter @websiss/database run db:studio",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

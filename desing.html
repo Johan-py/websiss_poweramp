@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SISS — Inscripción y Kardex</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" />
+<style>
+  @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+  :root{
+    --blue-50:#eff4ff;
+    --blue-100:#dbe6fe;
+    --blue-500:#3b6ff2;
+    --blue-600:#2563EB;
+    --blue-700:#1d4ed8;
+    --gray-50:#f8fafc;
+    --gray-100:#f1f5f9;
+    --gray-200:#e2e8f0;
+    --gray-300:#cbd5e1;
+    --gray-400:#94a3b8;
+    --gray-500:#64748b;
+    --gray-600:#475569;
+    --gray-700:#334155;
+    --gray-900:#0f172a;
+    --green-50:#ecfdf5;
+    --green-500:#10b981;
+    --green-700:#047857;
+    --red-50:#fef2f2;
+    --red-500:#ef4444;
+    --red-700:#b91c1c;
+    --amber-50:#fffbeb;
+    --amber-500:#f59e0b;
+    --amber-700:#b45309;
+    --radius:12px;
+    --radius-sm:8px;
+    --shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);
+    --shadow-md: 0 4px 10px rgba(15,23,42,0.06), 0 2px 4px rgba(15,23,42,0.04);
+    --shadow-lg: 0 12px 30px rgba(15,23,42,0.10), 0 4px 8px rgba(15,23,42,0.05);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Inter', sans-serif;
+    background:var(--gray-50);
+    color:var(--gray-900);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Lexend', sans-serif; margin:0; }
+  .mono{ font-family:'Roboto Mono', monospace; }
+  button{ font-family:inherit; cursor:pointer; }
+  .material-symbols-outlined{
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 22;
+    font-size:20px;
+    line-height:1;
+    vertical-align:middle;
+  }
+
+  /* ---------- Layout shell ---------- */
+  .app{
+    display:grid;
+    grid-template-columns:264px 1fr;
+    min-height:100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    background:#fff;
+    border-right:1px solid var(--gray-200);
+    padding:24px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 10px 24px 10px;
+  }
+  .brand-mark{
+    width:36px;height:36px;border-radius:10px;
+    background:linear-gradient(135deg,var(--blue-600),var(--blue-500));
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:'Lexend'; font-weight:700; font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-text{ line-height:1.15; }
+  .brand-text b{ font-family:'Lexend'; font-size:15px; font-weight:600; display:block; color:var(--gray-900);}
+  .brand-text span{ font-size:11.5px; color:var(--gray-500); }
+
+  .nav-section-label{
+    font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--gray-400); padding:16px 12px 6px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:12px;
+    padding:10px 12px; border-radius:var(--radius-sm);
+    color:var(--gray-600); font-size:14px; font-weight:500;
+    text-decoration:none; transition:background .15s, color .15s;
+  }
+  .nav-item:hover{ background:var(--gray-100); color:var(--gray-900); }
+  .nav-item.active{ background:var(--blue-50); color:var(--blue-700); font-weight:600; }
+  .nav-item.active .material-symbols-outlined{ font-variation-settings:'FILL' 1; }
+
+  .sidebar-footer{
+    margin-top:auto; padding:14px 12px; border-radius:var(--radius);
+    background:var(--gray-50); display:flex; gap:10px; align-items:center;
+  }
+  .avatar-sm{ width:34px;height:34px;border-radius:50%; background:var(--blue-100); color:var(--blue-700); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;}
+  .sidebar-footer div b{ display:block; font-size:13px; }
+  .sidebar-footer div span{ font-size:11.5px; color:var(--gray-500);}
+
+  /* ---------- Main column ---------- */
+  .main{ display:flex; flex-direction:column; min-width:0; }
+
+  .topbar{
+    height:72px; background:#fff; border-bottom:1px solid var(--gray-200);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 28px; position:sticky; top:0; z-index:20;
+  }
+  .topbar-tabs{ display:flex; gap:6px; background:var(--gray-100); padding:4px; border-radius:10px; }
+  .topbar-tab{
+    border:none; background:transparent; padding:8px 16px; border-radius:8px;
+    font-size:13.5px; font-weight:600; color:var(--gray-500);
+  }
+  .topbar-tab.active{ background:#fff; color:var(--blue-700); box-shadow:var(--shadow-sm); }
+  .topbar-right{ display:flex; align-items:center; gap:16px; }
+  .icon-btn{
+    width:38px;height:38px;border-radius:50%; border:1px solid var(--gray-200); background:#fff;
+    display:flex; align-items:center; justify-content:center; color:var(--gray-600); position:relative;
+  }
+  .icon-btn .dot{ position:absolute; top:8px; right:8px; width:7px;height:7px;border-radius:50%; background:var(--red-500); border:1.5px solid #fff;}
+
+  .content{ padding:28px 32px 60px; flex:1; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .page-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .page-head h1{ font-size:24px; font-weight:700; color:var(--gray-900); }
+  .page-head p{ margin:4px 0 0; font-size:13.5px; color:var(--gray-500); }
+  .eyebrow{ font-size:12px; font-weight:600; color:var(--blue-600); letter-spacing:.04em; text-transform:uppercase; margin-bottom:4px; }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; justify-content:center;
+    border-radius:var(--radius-sm); border:1px solid transparent; font-weight:600; font-size:13.5px;
+    padding:10px 16px; transition:all .15s;
+  }
+  .btn-primary{ background:var(--blue-600); color:#fff; box-shadow:var(--shadow-sm); }
+  .btn-primary:hover{ background:var(--blue-700); }
+  .btn-primary:disabled{ background:var(--gray-300); cursor:not-allowed; }
+  .btn-secondary{ background:#fff; color:var(--gray-700); border-color:var(--gray-200); }
+  .btn-secondary:hover{ background:var(--gray-50); }
+  .btn-ghost{ background:transparent; color:var(--gray-600); }
+  .btn-ghost:hover{ background:var(--gray-100); }
+  .btn-danger{ background:var(--red-500); color:#fff; }
+  .btn-sm{ padding:7px 12px; font-size:12.5px; border-radius:8px; }
+
+  /* ---------- Cards / stats ---------- */
+  .grid-stats{ display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:24px; }
+  .stat-card{
+    background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius);
+    padding:18px 18px; box-shadow:var(--shadow-sm);
+  }
+  .stat-card .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .stat-icon{ width:34px;height:34px;border-radius:9px; display:flex; align-items:center; justify-content:center;}
+  .stat-card .value{ font-family:'Lexend'; font-size:26px; font-weight:700; color:var(--gray-900); }
+  .stat-card .label{ font-size:12.5px; color:var(--gray-500); margin-top:2px; }
+
+  .panel{
+    background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius);
+    box-shadow:var(--shadow-sm);
+  }
+
+  /* ---------- Filters ---------- */
+  .filters-bar{
+    display:flex; gap:10px; align-items:center; padding:16px 18px; flex-wrap:wrap;
+    border-bottom:1px solid var(--gray-200);
+  }
+  .search-field{
+    flex:1; min-width:220px; display:flex; align-items:center; gap:8px;
+    background:var(--gray-50); border:1px solid var(--gray-200); border-radius:var(--radius-sm);
+    padding:9px 12px; color:var(--gray-500);
+  }
+  .search-field input{ border:none; background:transparent; outline:none; font-size:13.5px; width:100%; color:var(--gray-900); }
+  .select-field{
+    display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--gray-200);
+    border-radius:var(--radius-sm); padding:9px 12px; font-size:13px; color:var(--gray-700); font-weight:500;
+  }
+  .select-field .material-symbols-outlined{ font-size:17px; color:var(--gray-400);}
+
+  /* ---------- Table ---------- */
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--gray-500); padding:12px 16px; border-bottom:1px solid var(--gray-200); background:var(--gray-50);
+  }
+  tbody td{ padding:14px 16px; font-size:13.5px; border-bottom:1px solid var(--gray-100); color:var(--gray-700); vertical-align:middle;}
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--gray-50); }
+  .subject-cell b{ display:block; color:var(--gray-900); font-size:13.5px; }
+  .subject-cell span{ font-size:12px; color:var(--gray-500); }
+  .teacher-cell{ display:flex; align-items:center; gap:8px; }
+  .teacher-avatar{ width:26px;height:26px;border-radius:50%; background:var(--gray-200); display:flex;align-items:center;justify-content:center; font-size:11px; font-weight:700; color:var(--gray-600);}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700;
+    padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .badge-dot{ width:6px;height:6px;border-radius:50%; }
+  .badge-green{ background:var(--green-50); color:var(--green-700); }
+  .badge-green .badge-dot{ background:var(--green-500); }
+  .badge-red{ background:var(--red-50); color:var(--red-700); }
+  .badge-red .badge-dot{ background:var(--red-500); }
+  .badge-gray{ background:var(--gray-100); color:var(--gray-600); }
+  .badge-gray .badge-dot{ background:var(--gray-400); }
+  .badge-amber{ background:var(--amber-50); color:var(--amber-700); }
+  .badge-amber .badge-dot{ background:var(--amber-500); }
+  .badge-blue{ background:var(--blue-50); color:var(--blue-700); }
+  .badge-blue .badge-dot{ background:var(--blue-500); }
+
+  .seats-wrap{ display:flex; flex-direction:column; gap:5px; min-width:86px; }
+  .seats-bar{ height:5px; border-radius:4px; background:var(--gray-200); overflow:hidden; }
+  .seats-bar > div{ height:100%; border-radius:4px; }
+  .seats-text{ font-size:11.5px; color:var(--gray-500); }
+
+  .table-footer{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px; }
+  .pagination{ display:flex; align-items:center; gap:4px; }
+  .page-btn{ width:30px;height:30px; border-radius:8px; border:1px solid var(--gray-200); background:#fff; font-size:12.5px; font-weight:600; color:var(--gray-600); display:flex; align-items:center; justify-content:center; }
+  .page-btn.active{ background:var(--blue-600); color:#fff; border-color:var(--blue-600); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(15,23,42,.45); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:#fff; width:460px; max-width:100%; border-radius:16px; box-shadow:var(--shadow-lg);
+    overflow:hidden; animation:pop .18s ease;
+  }
+  @keyframes pop{ from{ opacity:0; transform:translateY(8px) scale(.98);} to{opacity:1; transform:none;} }
+  .modal-head{ padding:20px 22px 14px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .modal-head h3{ font-size:17px; font-weight:700; }
+  .modal-head p{ margin:3px 0 0; font-size:13px; color:var(--gray-500); }
+  .modal-close{ background:var(--gray-100); border:none; width:28px;height:28px;border-radius:50%; display:flex;align-items:center;justify-content:center; color:var(--gray-500); }
+  .modal-body{ padding:4px 22px 6px; }
+  .summary-row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--gray-200); font-size:13.5px; }
+  .summary-row:last-child{ border-bottom:none; }
+  .summary-row span:first-child{ color:var(--gray-500); }
+  .summary-row span:last-child{ color:var(--gray-900); font-weight:600; text-align:right; }
+  .modal-alert{
+    margin:14px 0 4px; display:flex; gap:10px; background:var(--amber-50); border:1px solid #fde68a;
+    border-radius:var(--radius-sm); padding:11px 13px; font-size:12.5px; color:var(--amber-700); line-height:1.5;
+  }
+  .modal-alert .material-symbols-outlined{ color:var(--amber-500); font-size:19px; flex-shrink:0; margin-top:1px;}
+  .modal-actions{ display:flex; gap:10px; padding:18px 22px 22px; }
+  .modal-actions .btn{ flex:1; }
+
+  /* ---------- Alert components ---------- */
+  .alert{
+    display:flex; gap:12px; padding:13px 15px; border-radius:var(--radius-sm); border:1px solid;
+    font-size:13px; line-height:1.5; align-items:flex-start;
+  }
+  .alert b{ display:block; font-size:13.5px; margin-bottom:2px; }
+  .alert .material-symbols-outlined{ font-size:20px; margin-top:1px; flex-shrink:0; }
+  .alert-close{ margin-left:auto; background:none; border:none; color:inherit; opacity:.55; }
+  .alert-red{ background:var(--red-50); border-color:#fecaca; color:var(--red-700); }
+  .alert-amber{ background:var(--amber-50); border-color:#fde68a; color:var(--amber-700); }
+  .alert-gray{ background:var(--gray-100); border-color:var(--gray-200); color:var(--gray-600); }
+
+  .alerts-stack{ display:flex; flex-direction:column; gap:10px; }
+
+  /* ---------- Kardex ---------- */
+  .kardex-header{
+    background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius);
+    padding:22px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px;
+    margin-bottom:20px; flex-wrap:wrap; box-shadow:var(--shadow-sm);
+  }
+  .kardex-id{ display:flex; align-items:center; gap:16px; }
+  .kardex-photo{
+    width:64px;height:64px;border-radius:14px; background:linear-gradient(135deg,var(--blue-100),var(--blue-50));
+    display:flex; align-items:center; justify-content:center; color:var(--blue-700); font-family:'Lexend'; font-weight:700; font-size:20px;
+  }
+  .kardex-id h2{ font-size:18px; }
+  .kardex-meta{ display:flex; gap:18px; margin-top:6px; flex-wrap:wrap;}
+  .kardex-meta span{ font-size:12.5px; color:var(--gray-500); display:flex; align-items:center; gap:5px; }
+  .kardex-meta .material-symbols-outlined{ font-size:16px; color:var(--gray-400);}
+  .kardex-actions{ display:flex; gap:10px; }
+
+  .progress-ring-wrap{ display:flex; align-items:center; gap:14px; }
+  .ring-label b{ display:block; font-size:20px; font-family:'Lexend'; color:var(--gray-900); }
+  .ring-label span{ font-size:12px; color:var(--gray-500); }
+
+  .accordion{ display:flex; flex-direction:column; gap:14px; }
+  .acc-item{ background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .acc-trigger{
+    width:100%; display:flex; align-items:center; justify-content:space-between; padding:16px 20px;
+    background:none; border:none; text-align:left;
+  }
+  .acc-trigger-left{ display:flex; align-items:center; gap:12px; }
+  .acc-trigger h4{ font-size:14.5px; font-weight:700; }
+  .acc-trigger .sub{ font-size:12px; color:var(--gray-500); font-weight:400; margin-top:2px;}
+  .acc-chevron{ transition:transform .18s; color:var(--gray-400); }
+  .acc-item.open .acc-chevron{ transform:rotate(180deg); }
+  .acc-body{ display:none; border-top:1px solid var(--gray-200); }
+  .acc-item.open .acc-body{ display:block; }
+  .acc-summary{ display:flex; gap:20px; padding:12px 20px; background:var(--gray-50); font-size:12px; color:var(--gray-500); flex-wrap:wrap;}
+  .acc-summary b{ color:var(--gray-800); }
+
+  .status-chip{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; }
+  .chip-completed{ background:var(--green-50); color:var(--green-700); }
+  .chip-active{ background:var(--blue-50); color:var(--blue-700); }
+  .chip-withdrawn{ background:var(--amber-50); color:var(--amber-700); }
+  .chip-cancelled{ background:var(--gray-100); color:var(--gray-500); }
+
+  @media (max-width:1100px){
+    .grid-stats{ grid-template-columns:repeat(3,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SS</div>
+      <div class="brand-text"><b>SISS</b><span>Sistema Académico</span></div>
+    </div>
+
+    <div class="nav-section-label">General</div>
+    <a class="nav-item"><span class="material-symbols-outlined">grid_view</span> Panel principal</a>
+    <a class="nav-item active" onclick="return false;"><span class="material-symbols-outlined">edit_calendar</span> Inscripción</a>
+    <a class="nav-item"><span class="material-symbols-outlined">school</span> Mi Kardex</a>
+    <a class="nav-item"><span class="material-symbols-outlined">calendar_month</span> Calendario</a>
+
+    <div class="nav-section-label">Cuenta</div>
+    <a class="nav-item"><span class="material-symbols-outlined">notifications</span> Notificaciones</a>
+    <a class="nav-item"><span class="material-symbols-outlined">person</span> Mi perfil</a>
+    <a class="nav-item"><span class="material-symbols-outlined">settings</span> Configuración</a>
+
+    <div class="sidebar-footer">
+      <div class="avatar-sm">JP</div>
+      <div><b>Juan Pérez</b><span>Estudiante · E001</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-tabs">
+        <button class="topbar-tab active" onclick="showView('inscripcion', this)">Inscripción</button>
+        <button class="topbar-tab" onclick="showView('kardex', this)">Mi Kardex</button>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn"><span class="material-symbols-outlined">search</span></button>
+        <button class="icon-btn"><span class="material-symbols-outlined">notifications</span><span class="dot"></span></button>
+        <div class="avatar-sm">JP</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ======================= VISTA 1: INSCRIPCIÓN ======================= -->
+      <section id="view-inscripcion" class="view active">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Período 2026-2 · Matrícula abierta</div>
+            <h1>Oferta académica</h1>
+            <p>Selecciona las materias en las que deseas inscribirte. Máximo 24 créditos por período.</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-secondary"><span class="material-symbols-outlined">list_alt</span> Mis inscripciones</button>
+            <button class="btn btn-primary"><span class="material-symbols-outlined">fact_check</span> Ver prerrequisitos</button>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:22px;">
+          <div class="filters-bar">
+            <div class="search-field">
+              <span class="material-symbols-outlined">search</span>
+              <input placeholder="Buscar por código o nombre de materia…">
+            </div>
+            <div class="select-field"><span class="material-symbols-outlined">school</span> Carrera <span class="material-symbols-outlined">expand_more</span></div>
+            <div class="select-field"><span class="material-symbols-outlined">event</span> Semestre <span class="material-symbols-outlined">expand_more</span></div>
+            <div class="select-field"><span class="material-symbols-outlined">person</span> Docente <span class="material-symbols-outlined">expand_more</span></div>
+            <div class="select-field"><span class="material-symbols-outlined">tune</span> Más filtros</div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Materia</th>
+                <th>Docente</th>
+                <th>Horario / Aula</th>
+                <th>Cupos</th>
+                <th>Créd.</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="subject-cell"><b>Matemática Discreta</b><span>MAT-101 · Sección A</span></td>
+                <td><div class="teacher-cell"><div class="teacher-avatar">DX</div> Dr. Ramiro Ortiz</div></td>
+                <td>Lun–Mié 07:00–08:30 <br><span style="color:var(--gray-400);font-size:12px;">Aula B-204</span></td>
+                <td><div class="seats-wrap"><div class="seats-bar"><div style="width:70%;background:var(--green-500);"></div></div><span class="seats-text">14 / 20 cupos</span></div></td>
+                <td>4</td>
+                <td><span class="badge badge-green"><span class="badge-dot"></span>Disponible</span></td>
+                <td><button class="btn btn-primary btn-sm" onclick="openModal()">Inscribir</button></td>
+              </tr>
+              <tr>
+                <td class="subject-cell"><b>Programación I</b><span>PROG-110 · Sección B</span></td>
+                <td><div class="teacher-cell"><div class="teacher-avatar">SY</div> Ing. Solange Yupanqui</div></td>
+                <td>Mar–Jue 09:00–10:30 <br><span style="color:var(--gray-400);font-size:12px;">Aula Lab-3</span></td>
+                <td><div class="seats-wrap"><div class="seats-bar"><div style="width:95%;background:var(--amber-500);"></div></div><span class="seats-text">19 / 20 cupos</span></div></td>
+                <td>4</td>
+                <td><span class="badge badge-amber"><span class="badge-dot"></span>Casi lleno</span></td>
+                <td><button class="btn btn-primary btn-sm" onclick="openModal()">Inscribir</button></td>
+              </tr>
+              <tr>
+                <td class="subject-cell"><b>Lógica Computacional</b><span>LOG-101 · Sección A</span></td>
+                <td><div class="teacher-cell"><div class="teacher-avatar">MZ</div> Lic. Marco Zeballos</div></td>
+                <td>Vie 14:00–17:00 <br><span style="color:var(--gray-400);font-size:12px;">Aula C-108</span></td>
+                <td><div class="seats-wrap"><div class="seats-bar"><div style="width:100%;background:var(--red-500);"></div></div><span class="seats-text">20 / 20 cupos</span></div></td>
+                <td>3</td>
+                <td><span class="badge badge-red"><span class="badge-dot"></span>Lleno</span></td>
+                <td><button class="btn btn-secondary btn-sm" disabled>Sin cupo</button></td>
+              </tr>
+              <tr>
+                <td class="subject-cell"><b>Estructura de Datos</b><span>PROG-210 · Sección A</span></td>
+                <td><div class="teacher-cell"><div class="teacher-avatar">DY</div> Dr. Diego Yucra</div></td>
+                <td>Lun–Mié 11:00–12:30 <br><span style="color:var(--gray-400);font-size:12px;">Aula Lab-1</span></td>
+                <td><div class="seats-wrap"><div class="seats-bar"><div style="width:40%;background:var(--green-500);"></div></div><span class="seats-text">8 / 20 cupos</span></div></td>
+                <td>4</td>
+                <td><span class="badge badge-gray"><span class="badge-dot"></span>Requiere prerreq.</span></td>
+                <td><button class="btn btn-secondary btn-sm" disabled>Bloqueado</button></td>
+              </tr>
+              <tr>
+                <td class="subject-cell"><b>Bases de Datos</b><span>BDD-220 · Sección A</span></td>
+                <td><div class="teacher-cell"><div class="teacher-avatar">CL</div> Ing. Carla Luna</div></td>
+                <td>Mar–Jue 15:00–16:30 <br><span style="color:var(--gray-400);font-size:12px;">Aula B-301</span></td>
+                <td><div class="seats-wrap"><div class="seats-bar"><div style="width:55%;background:var(--green-500);"></div></div><span class="seats-text">11 / 20 cupos</span></div></td>
+                <td>4</td>
+                <td><span class="badge badge-blue"><span class="badge-dot"></span>Ya inscrito</span></td>
+                <td><button class="btn btn-secondary btn-sm" disabled>Inscrito</button></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="table-footer">
+            <span style="font-size:12.5px;color:var(--gray-500);">Mostrando 5 de 42 ofertas</span>
+            <div class="pagination">
+              <button class="page-btn"><span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span></button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">3</button>
+              <button class="page-btn"><span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estados de error reutilizables -->
+        <h3 style="font-size:14px;margin-bottom:12px;color:var(--gray-700);">Mensajes del sistema</h3>
+        <div class="alerts-stack">
+          <div class="alert alert-red">
+            <span class="material-symbols-outlined">block</span>
+            <div><b>Cupo lleno</b>La oferta Lógica Computacional (LOG-101) no tiene cupos disponibles. Elige otra sección u otro horario.</div>
+            <button class="alert-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="alert alert-amber">
+            <span class="material-symbols-outlined">event_busy</span>
+            <div><b>Conflicto de horario</b>Estructura de Datos se superpone con Programación I (Mar 09:00–10:30). Ajusta tu selección.</div>
+            <button class="alert-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="alert alert-amber">
+            <span class="material-symbols-outlined">rule</span>
+            <div><b>Prerrequisitos no cumplidos</b>Necesitas aprobar Programación I antes de inscribirte en Estructura de Datos.</div>
+            <button class="alert-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="alert alert-gray">
+            <span class="material-symbols-outlined">how_to_reg</span>
+            <div><b>Ya se encuentra inscrito</b>Ya tienes un cupo activo en Bases de Datos (BDD-220) para este período.</div>
+            <button class="alert-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="alert alert-red">
+            <span class="material-symbols-outlined">lock_clock</span>
+            <div><b>Período de matrícula cerrado</b>El período académico 2026-1 ya no admite nuevas inscripciones. Consulta las fechas del próximo período.</div>
+            <button class="alert-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= VISTA 2: KARDEX ======================= -->
+      <section id="view-kardex" class="view">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">Historial académico</div>
+            <h1>Mi Kardex</h1>
+            <p>Resumen completo de materias cursadas, notas y avance en la carrera.</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-secondary"><span class="material-symbols-outlined">print</span> Imprimir</button>
+            <button class="btn btn-primary"><span class="material-symbols-outlined">download</span> Descargar PDF</button>
+          </div>
+        </div>
+
+        <div class="kardex-header">
+          <div class="kardex-id">
+            <div class="kardex-photo">JP</div>
+            <div>
+              <h2>Juan Pérez López</h2>
+              <div class="kardex-meta">
+                <span><span class="material-symbols-outlined">badge</span> E001</span>
+                <span><span class="material-symbols-outlined">school</span> Ingeniería en Sistemas</span>
+                <span><span class="material-symbols-outlined">workspace_premium</span> Presencial</span>
+                <span><span class="material-symbols-outlined">calendar_today</span> Ingreso: 15 feb 2024</span>
+              </div>
+            </div>
+          </div>
+          <div class="progress-ring-wrap">
+            <svg width="60" height="60" viewBox="0 0 60 60">
+              <circle cx="30" cy="30" r="26" fill="none" stroke="#e2e8f0" stroke-width="6"/>
+              <circle cx="30" cy="30" r="26" fill="none" stroke="#2563EB" stroke-width="6"
+                stroke-dasharray="163.4" stroke-dashoffset="155.2" stroke-linecap="round"
+                transform="rotate(-90 30 30)"/>
+            </svg>
+            <div class="ring-label"><b>5.0%</b><span>Avance de carrera</span></div>
+          </div>
+        </div>
+
+        <div class="grid-stats">
+          <div class="stat-card">
+            <div class="top"><div class="stat-icon" style="background:var(--blue-50);color:var(--blue-600);"><span class="material-symbols-outlined">layers</span></div></div>
+            <div class="value">11</div><div class="label">Créditos inscritos</div>
+          </div>
+          <div class="stat-card">
+            <div class="top"><div class="stat-icon" style="background:var(--green-50);color:var(--green-700);"><span class="material-symbols-outlined">check_circle</span></div></div>
+            <div class="value">8</div><div class="label">Créditos aprobados</div>
+          </div>
+          <div class="stat-card">
+            <div class="top"><div class="stat-icon" style="background:var(--red-50);color:var(--red-700);"><span class="material-symbols-outlined">cancel</span></div></div>
+            <div class="value">0</div><div class="label">Créditos reprobados</div>
+          </div>
+          <div class="stat-card">
+            <div class="top"><div class="stat-icon" style="background:var(--amber-50);color:var(--amber-700);"><span class="material-symbols-outlined">trending_up</span></div></div>
+            <div class="value">80.0</div><div class="label">Promedio general</div>
+          </div>
+          <div class="stat-card">
+            <div class="top"><div class="stat-icon" style="background:var(--blue-50);color:var(--blue-600);"><span class="material-symbols-outlined">donut_large</span></div></div>
+            <div class="value">5.0%</div><div class="label">Avance de carrera</div>
+          </div>
+        </div>
+
+        <div class="accordion">
+          <div class="acc-item open">
+            <button class="acc-trigger" onclick="toggleAcc(this)">
+              <div class="acc-trigger-left">
+                <span class="material-symbols-outlined" style="color:var(--blue-600);">event_note</span>
+                <div><h4>Período 2024-1 <span class="sub">15 ene 2024 – 30 jun 2024</span></h4></div>
+              </div>
+              <span class="material-symbols-outlined acc-chevron">expand_more</span>
+            </button>
+            <div class="acc-body">
+              <table>
+                <thead>
+                  <tr><th>Materia</th><th>Docente</th><th>Créd.</th><th>Nota final</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="subject-cell"><b>Matemática Básica</b><span>MAT-100</span></td>
+                    <td>Dr. Ramiro Ortiz</td><td>4</td>
+                    <td class="mono">85.0</td>
+                    <td><span class="status-chip chip-completed">Completada</span></td>
+                  </tr>
+                  <tr>
+                    <td class="subject-cell"><b>Programación I</b><span>PROG-110</span></td>
+                    <td>Ing. Solange Yupanqui</td><td>4</td>
+                    <td class="mono">75.0</td>
+                    <td><span class="status-chip chip-completed">Completada</span></td>
+                  </tr>
+                  <tr>
+                    <td class="subject-cell"><b>Lógica Computacional</b><span>LOG-101</span></td>
+                    <td>Lic. Marco Zeballos</td><td>3</td>
+                    <td class="mono" style="color:var(--gray-400);">S/N</td>
+                    <td><span class="status-chip chip-active">Activa</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="acc-summary">
+                <span>Créditos inscritos: <b>11</b></span>
+                <span>Créditos aprobados: <b>8</b></span>
+                <span>Promedio del período: <b>80.0</b></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc-item">
+            <button class="acc-trigger" onclick="toggleAcc(this)">
+              <div class="acc-trigger-left">
+                <span class="material-symbols-outlined" style="color:var(--gray-400);">event_note</span>
+                <div><h4>Período 2023-2 <span class="sub">1 ago 2023 – 20 dic 2023</span></h4></div>
+              </div>
+              <span class="material-symbols-outlined acc-chevron">expand_more</span>
+            </button>
+            <div class="acc-body">
+              <table>
+                <thead>
+                  <tr><th>Materia</th><th>Docente</th><th>Créd.</th><th>Nota final</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="subject-cell"><b>Introducción a la Ingeniería</b><span>ING-050</span></td>
+                    <td>Ing. Paola Rivas</td><td>2</td>
+                    <td class="mono">90.0</td>
+                    <td><span class="status-chip chip-completed">Completada</span></td>
+                  </tr>
+                  <tr>
+                    <td class="subject-cell"><b>Cálculo Diferencial</b><span>MAT-090</span></td>
+                    <td>Dr. Ramiro Ortiz</td><td>4</td>
+                    <td class="mono" style="color:var(--gray-400);">—</td>
+                    <td><span class="status-chip chip-withdrawn">Retirada</span></td>
+                  </tr>
+                  <tr>
+                    <td class="subject-cell"><b>Comunicación Oral y Escrita</b><span>COM-020</span></td>
+                    <td>Lic. Nina Vargas</td><td>2</td>
+                    <td class="mono" style="color:var(--gray-400);">—</td>
+                    <td><span class="status-chip chip-cancelled">Cancelada</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="acc-summary">
+                <span>Créditos inscritos: <b>8</b></span>
+                <span>Créditos aprobados: <b>2</b></span>
+                <span>Promedio del período: <b>90.0</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmación de inscripción -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3>Confirmar inscripción</h3>
+        <p>Revisa los datos antes de confirmar tu cupo.</p>
+      </div>
+      <button class="modal-close" onclick="closeModal()"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="summary-row"><span>Materia</span><span>Matemática Discreta (MAT-101)</span></div>
+      <div class="summary-row"><span>Docente</span><span>Dr. Ramiro Ortiz</span></div>
+      <div class="summary-row"><span>Horario</span><span>Lun–Mié 07:00–08:30</span></div>
+      <div class="summary-row"><span>Aula</span><span>B-204</span></div>
+      <div class="summary-row"><span>Créditos</span><span>4</span></div>
+      <div class="modal-alert">
+        <span class="material-symbols-outlined">info</span>
+        <span>Al confirmar, se descontará un cupo de la oferta. Podrás cancelar la inscripción hasta el 14 de agosto.</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="closeModal()"><span class="material-symbols-outlined">check</span> Confirmar inscripción</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showView(name, el){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+name).classList.add('active');
+    document.querySelectorAll('.topbar-tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function openModal(){ document.getElementById('modalOverlay').classList.add('open'); }
+  function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+  document.getElementById('modalOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeModal();
+  });
+  function toggleAcc(btn){
+    btn.parentElement.classList.toggle('open');
+  }
+</script>
+
+</body>
+</html>
