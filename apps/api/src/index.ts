@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import multipart from "@fastify/multipart";
 import { config } from "./utils/config.js";
 import { corsPlugin } from "./plugins/cors.js";
 import { prismaPlugin } from "./plugins/prisma.js";
@@ -17,6 +18,7 @@ async function main() {
   await app.register(corsPlugin);
   await app.register(prismaPlugin);
   await app.register(authPlugin);
+  await app.register(multipart);
 
   await app.register(uploadRoutes, { prefix: "/api/v1/upload" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });

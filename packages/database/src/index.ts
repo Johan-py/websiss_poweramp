@@ -1,9 +1,10 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
-export { PrismaClient, Prisma };
+// Reexportar todos los tipos y enums de Prisma
+export * from "@prisma/client";
 
 const globalForPrisma = globalThis as {
-  prisma: PrismaClient | undefined;
+  prisma?: PrismaClient;
 };
 
 export const prisma =

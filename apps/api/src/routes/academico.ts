@@ -189,8 +189,8 @@ export async function academicoRoutes(app: FastifyInstance) {
     const todasNotas = inscripciones.filter((i) => i.estado === "COMPLETADA");
     const creditosAprobados = todasNotas.reduce((s, i) => s + i.oferta.materia.creditos, 0);
     const creditosTotales = inscripciones.reduce((s, i) => s + i.oferta.materia.creditos, 0);
-    const creditosCarrera = estudiante.carrera?.duracionSemestres * 60 ?? 240;
-
+    const creditosCarrera =(estudiante.carrera?.duracionSemestres ?? 4) * 60;
+    
     return {
       estudiante: {
         id: estudiante.id,

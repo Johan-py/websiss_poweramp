@@ -22,6 +22,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.47.0
         version: 2.110.9
+      '@websiss/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@websiss/database':
         specifier: workspace:*
         version: link:../../packages/database
