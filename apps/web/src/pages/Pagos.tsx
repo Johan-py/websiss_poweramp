@@ -29,7 +29,7 @@ const columns: Column<PagoRow>[] = [
     key: "monto",
     header: "Monto",
     sortable: true,
-    render: (item) => <span className="font-medium">C$ {item.monto.toLocaleString()}</span>,
+    render: (item) => <span className="font-medium">Bs {item.monto.toLocaleString()}</span>,
   },
   { key: "fecha", header: "Fecha", sortable: true, className: "text-muted-foreground" },
   {

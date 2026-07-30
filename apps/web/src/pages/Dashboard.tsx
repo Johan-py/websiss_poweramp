@@ -60,7 +60,7 @@ export function Dashboard() {
         <MetricCard label="Estudiantes" value={loading ? "..." : stats?.totalEstudiantes ?? 0} icon={Users} trend={{ value: "12% vs periodo anterior", positive: true }} />
         <MetricCard label="Docentes" value={loading ? "..." : stats?.totalDocentes ?? 0} icon={GraduationCap} trend={{ value: "2 nuevos", positive: true }} />
         <MetricCard label="Ofertas Activas" value={loading ? "..." : stats?.ofertasActivas ?? 0} icon={FileSpreadsheet} />
-        <MetricCard label="Ingresos del Periodo" value={loading ? "..." : `C$ ${(stats?.ingresosPeriodo ?? 0).toLocaleString()}`} icon={DollarSign} trend={{ value: "8% vs periodo anterior", positive: true }} />
+        <MetricCard label="Ingresos del Periodo" value={loading ? "..." : `Bs ${(stats?.ingresosPeriodo ?? 0).toLocaleString()}`} icon={DollarSign} trend={{ value: "8% vs periodo anterior", positive: true }} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
