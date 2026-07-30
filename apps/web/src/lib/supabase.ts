@@ -4,12 +4,10 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Supabase env vars not set. Auth and MFA will not work until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are configured.",
+  throw new Error(
+    "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. " +
+    "Create a .env file at the workspace root with these variables.",
   );
 }
 
-export const supabase = createClient(
-  supabaseUrl || "https://placeholder.supabase.co",
-  supabaseAnonKey || "placeholder-key",
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

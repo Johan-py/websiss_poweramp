@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import fp from "fastify-plugin";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { config } from "../utils/config.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -33,10 +34,7 @@ export const authPlugin = fp(async (app: FastifyInstance) => {
   app.decorateRequest("userRole", undefined);
 
   app.decorate("authenticate", async (request: FastifyRequest, reply: FastifyReply) => {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    if (!supabaseUrl) {
-      return reply.status(500).send({ message: "SUPABASE_URL not configured" });
-    }
+    const supabaseUrl = config.SUPABASE_URL;
 
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {

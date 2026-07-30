@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: websiss-api
+    runtime: node
+    repo: https://github.com/tu-usuario/websiss_poweramp
+    rootDir: .
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm --filter @websiss/api run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PORT
+        value: 4000
+      - key: HOST
+        value: 0.0.0.0
