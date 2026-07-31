@@ -30,7 +30,12 @@ export async function academicoRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/carreras/:id", async (req: FastifyRequest<{ Params: { id: string } }>) => {
-    const c = await app.prisma.carrera.findUnique({ where: { id: req.params.id } });
+    const c = await app.prisma.carrera.findUnique({
+      where: { id: req.params.id },
+      include: {
+        materias: { orderBy: [{ ciclo: "asc" }, { nombre: "asc" }] },
+      },
+    });
     if (!c) return { error: "No encontrada" };
     return c;
   });
