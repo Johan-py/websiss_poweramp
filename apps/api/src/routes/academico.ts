@@ -16,7 +16,7 @@ const ofertaInclude = {
   materia: { include: { carrera: true } },
   docente: { include: { perfil: true } },
   aula: true,
-  periodo: true,
+  // periodo: true,
 } satisfies Prisma.OfertaAcademicaInclude;
 
 const inscripcionInclude = {
@@ -543,10 +543,20 @@ export async function academicoRoutes(app: FastifyInstance) {
         return { periodo: codigo, materias, totalCreditos, promedio: Math.round(promedio * 100) / 100 };
       });
 
-      const todasNotas = inscripciones.filter((i) => i.estado === "COMPLETADA");
-      const creditosAprobados = todasNotas.reduce((s, i) => s + i.oferta.materia.creditos, 0);
-      const creditosTotales = inscripciones.reduce((s, i) => s + i.oferta.materia.creditos, 0);
-      const creditosCarrera = (estudiante.carrera?.duracionSemestres ?? 4) * 60;
+
+      // Créditos cursados
+      const creditosCursados = inscripciones.reduce(
+        (s, i) => s + i.oferta.materia.creditos,
+        0
+      );
+
+      // Créditos aprobados según nota >= 14
+      const creditosAprobados = todasMaterias
+        .filter((m) => m.nota !== null && m.nota >= 14)
+        .reduce((s, m) => s + m.creditos, 0);
+
+      // Temporal: créditos requeridos de la carrera
+      const creditosCarrera = 240;
 
       const notasConValor = todasMaterias.filter((m) => m.nota != null) as { nota: number; creditos: number }[];
       const promedioGlobal = notasConValor.length > 0
@@ -568,7 +578,8 @@ export async function academicoRoutes(app: FastifyInstance) {
         },
         periodos,
         creditosAprobados,
-        creditosTotales,
+        creditosCursados,
+        creditosCarrera,
         avance: Math.min(100, Math.round((creditosAprobados / creditosCarrera) * 100)),
         promedioGlobal: Math.round(promedioGlobal * 100) / 100,
         promedioPonderadoGlobal: Math.round(promedioPonderadoGlobal * 100) / 100,

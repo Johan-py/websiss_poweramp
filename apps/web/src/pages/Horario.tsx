@@ -45,30 +45,69 @@ export function HorarioPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const rol = perfil?.rol;
-    Promise.all([api.ofertas.list(), api.inscripciones.list()])
-      .then(([ofertas, inscripciones]) => {
-        let ofertaIds: string[] | null = null;
+    if (!perfil) return;
+    const perfilActual = perfil;
+
+    let cancelled = false;
+
+    async function cargarHorario() {
+      setLoading(true);
+
+      try {
+        const rol = perfilActual.rol;
+
+        const [ofertas, inscripciones] = await Promise.all([
+          api.ofertas.list(),
+          api.inscripciones.list(),
+        ]);
+
+        let list: any[] = [];
+
         if (rol === "ESTUDIANTE") {
-          const estId = perfil?.estudiante?.id;
-          ofertaIds = inscripciones
-            .filter((i: any) => i.estudianteId === estId && i.estado === "ACTIVA")
+          const estId = perfilActual.estudiante?.id;
+
+          const ofertaIds = inscripciones
+            .filter(
+              (i: any) =>
+                i.estudianteId === estId &&
+                i.estado === "ACTIVA"
+            )
             .map((i: any) => i.ofertaId);
+
+          list = ofertas.filter((o: any) =>
+            ofertaIds.includes(o.id)
+          );
+
         } else if (rol === "DOCENTE") {
-          const docId = perfil?.docente?.id;
-          ofertaIds = ofertas.filter((o: any) => o.docenteId === docId).map((o: any) => o.id);
+          const docId = perfilActual.docente?.id;
+
+          list = ofertas.filter(
+            (o: any) => o.docenteId === docId
+          );
+
+        } else if (
+          rol === "ADMIN" ||
+          rol === "COORDINADOR"
+        ) {
+          list = ofertas;
         }
 
-        const list = (ofertaIds ? ofertas.filter((o: any) => ofertaIds!.includes(o.id)) : ofertas) as any[];
         const parsed: HorarioBlock[] = [];
+
         for (const o of list) {
-          for (const slot of parseHorario(o.horario)) {
+          const slots = parseHorario(o.horario);
+
+          for (const slot of slots) {
             parsed.push({
               id: `${o.id}-${slot.dia}-${slot.horaInicio}`,
               materia: o.materia?.nombre ?? "",
               codigo: o.materia?.codigo ?? "",
-              docente: o.docente?.perfil ? `${o.docente.perfil.nombre} ${o.docente.perfil.apellido}` : "",
-              aula: o.aula?.nombre ?? (o.modalidad === "VIRTUAL" ? "Virtual" : ""),
+              docente: o.docente?.perfil
+                ? `${o.docente.perfil.nombre} ${o.docente.perfil.apellido}`
+                : "",
+              aula:
+                o.aula?.nombre ??
+                (o.modalidad === "VIRTUAL" ? "Virtual" : ""),
               dia: slot.dia,
               horaInicio: slot.horaInicio,
               horaFin: slot.horaFin,
@@ -76,11 +115,31 @@ export function HorarioPage() {
             });
           }
         }
-        setBlocks(parsed);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [perfil?.rol, perfil?.estudiante?.id, perfil?.docente?.id]);
+
+        if (!cancelled) {
+          setBlocks(parsed);
+        }
+
+      } catch (error) {
+        console.error("Error cargando horario:", error);
+
+        if (!cancelled) {
+          setBlocks([]);
+        }
+
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    cargarHorario();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [perfil]);
 
   const byDay = useMemo(() => {
     const map: Record<string, HorarioBlock[]> = {};
@@ -95,65 +154,252 @@ export function HorarioPage() {
     return map;
   }, [blocks]);
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Horario" description="Distribución de clases por día" />
+return (
+  <div className="space-y-6">
 
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-muted/60" />
-          ))}
-        </div>
-      ) : blocks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="rounded-full bg-muted p-4 mb-4"><Clock className="h-6 w-6 text-muted-foreground" /></div>
-          <p className="text-sm font-medium">Sin horario asignado</p>
-          <p className="text-xs text-muted-foreground">No tienes clases registradas para este periodo.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {DAYS.map((day) => {
-            const dayBlocks = byDay[day];
-            if (dayBlocks.length === 0) return null;
-            return (
-              <div key={day} className="rounded-xl border bg-card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold">{day}</h3>
-                  <Badge variant="secondary" className="text-[10px]">{dayBlocks.length} clases</Badge>
-                </div>
-                <div className="space-y-3">
-                  {dayBlocks.map((b) => (
-                    <div key={b.id} className="rounded-lg border bg-background p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium">{b.materia}</p>
-                        <span className="text-xs font-mono text-muted-foreground">{b.codigo}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {b.horaInicio} - {b.horaFin}
-                        </span>
-                        {b.aula && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {b.aula}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
-                        <GraduationCap className="h-3 w-3" />
-                        {b.docente || b.modalidad}
-                      </div>
-                      <div className={cn("mt-2 h-1 rounded-full", b.modalidad === "VIRTUAL" ? "bg-primary/40" : "bg-success/40")} />
-                    </div>
-                  ))}
-                </div>
+    <PageHeader
+      title="Horario académico"
+      description="Tus clases programadas del periodo actual"
+    />
+
+
+    {loading ? (
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({length:6}).map((_,i)=>(
+          <div
+            key={i}
+            className="h-32 rounded-xl bg-muted animate-pulse"
+          />
+        ))}
+      </div>
+
+
+    ) : blocks.length === 0 ? (
+
+      <div className="
+        flex
+        flex-col
+        items-center
+        justify-center
+        py-20
+        text-center
+      ">
+        <Clock className="h-8 w-8 text-muted-foreground mb-3"/>
+
+        <p className="font-medium">
+          Sin horario asignado
+        </p>
+
+        <p className="text-sm text-muted-foreground">
+          No tienes clases registradas.
+        </p>
+
+      </div>
+
+
+    ) : (
+
+      <div className="
+        grid
+        gap-5
+        md:grid-cols-2
+        xl:grid-cols-3
+      ">
+
+
+        {DAYS.map(day=>{
+
+          const clases = byDay[day];
+
+          if (!clases.length) return null;
+
+
+          return (
+
+            <section
+              key={day}
+              className="
+                rounded-xl
+                border
+                bg-card
+                overflow-hidden
+              "
+            >
+
+              {/* Header día */}
+
+              <div className="
+                flex
+                items-center
+                justify-between
+                px-4
+                py-3
+                border-b
+                bg-muted/30
+              ">
+
+                <h3 className="
+                  text-sm
+                  font-semibold
+                ">
+                  {day}
+                </h3>
+
+
+                <Badge
+                  variant="secondary"
+                  className="text-[10px]"
+                >
+                  {clases.length}
+                </Badge>
+
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+
+
+
+              <div className="
+                p-3
+                space-y-3
+              ">
+
+
+                {clases.map(b=>(
+
+                  <article
+                    key={b.id}
+                    className="
+                      rounded-lg
+                      border
+                      p-3
+                      hover:bg-muted/30
+                      transition
+                    "
+                  >
+
+
+                    {/* hora */}
+
+                    <div className="
+                      flex
+                      items-center
+                      gap-2
+                      text-xs
+                      text-primary
+                      font-medium
+                    ">
+
+                      <Clock className="h-3.5 w-3.5"/>
+
+                      {b.horaInicio}
+                      {" - "}
+                      {b.horaFin}
+
+                    </div>
+
+
+
+                    {/* materia */}
+
+                    <div className="mt-2">
+
+                      <h4 className="
+                        text-sm
+                        font-semibold
+                        leading-tight
+                      ">
+                        {b.materia}
+                      </h4>
+
+
+                      <span className="
+                        text-xs
+                        font-mono
+                        text-muted-foreground
+                      ">
+                        {b.codigo}
+                      </span>
+
+                    </div>
+
+
+
+                    {/* detalles */}
+
+                    <div className="
+                      mt-3
+                      space-y-1.5
+                      text-xs
+                      text-muted-foreground
+                    ">
+
+
+                      {b.docente && (
+
+                        <div className="
+                          flex
+                          items-center
+                          gap-2
+                        ">
+                          <GraduationCap className="h-3.5 w-3.5"/>
+
+                          {b.docente}
+
+                        </div>
+
+                      )}
+
+
+
+                      {b.aula && (
+
+                        <div className="
+                          flex
+                          items-center
+                          gap-2
+                        ">
+                          <MapPin className="h-3.5 w-3.5"/>
+
+                          {b.aula}
+
+                        </div>
+
+                      )}
+
+                    </div>
+
+
+
+                    <Badge
+                      variant={
+                        b.modalidad === "VIRTUAL"
+                          ? "default"
+                          : "secondary"
+                      }
+                      className="mt-3 text-[10px]"
+                    >
+                      {b.modalidad}
+                    </Badge>
+
+
+                  </article>
+
+                ))}
+
+              </div>
+
+
+            </section>
+
+          );
+
+        })}
+
+
+      </div>
+
+    )}
+
+  </div>
+);
 }

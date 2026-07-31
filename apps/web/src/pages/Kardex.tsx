@@ -17,15 +17,31 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 interface KardexData {
-  estudiante: { id: string; nombres: string; apellidos: string; cedula: string; email: string; carrera: string };
+  estudiante: {
+    id: string;
+    nombres: string;
+    apellidos: string;
+    cedula: string;
+    email: string;
+    carrera: string;
+  };
   periodos: {
     periodo: string;
-    materias: { materiaId: string; materia: string; codigo: string; docente: string; creditos: number; nota: number | null; estado: string }[];
+    materias: {
+      materiaId: string;
+      materia: string;
+      codigo: string;
+      docente: string;
+      creditos: number;
+      nota: number | null;
+      estado: string;
+    }[];
     totalCreditos: number;
     promedio: number;
   }[];
   creditosAprobados: number;
-  creditosTotales: number;
+  creditosCursados: number;
+  creditosCarrera: number;
   avance: number;
   promedioGlobal: number;
   promedioPonderadoGlobal: number;
@@ -164,7 +180,12 @@ export function Kardex() {
       doc.setFontSize(11);
       doc.text(`${kardex.promedioGlobal}`, margin + 3, labelY + 5);
       doc.text(`${kardex.promedioPonderadoGlobal}`, margin + 43, labelY + 5);
-      doc.text(`${kardex.creditosAprobados} de ${kardex.creditosTotales}`, margin + 90, labelY + 5);
+      doc.text(
+        `${kardex.creditosAprobados} de ${kardex.creditosCarrera}`,
+        margin + 90,
+        labelY + 5
+      );
+
       doc.text(`${kardex.avance}%`, margin + 138, labelY + 5);
       doc.setTextColor(0, 0, 0);
       y += 14;
@@ -293,8 +314,30 @@ export function Kardex() {
                 <div className="rounded-lg bg-success/10 p-2"><Award className="h-4 w-4 text-success" /></div>
                 <span className="text-xs font-medium text-muted-foreground">Créditos Aprobados</span>
               </div>
-              <p className="text-2xl font-semibold">{kardex.creditosAprobados} <span className="text-sm text-muted-foreground">/ {kardex.creditosTotales}</span></p>
+                <p className="text-2xl font-semibold">
+                  {kardex.creditosAprobados}
+                  <span className="text-sm text-muted-foreground">
+                    {" "} / {kardex.creditosCarrera}
+                  </span>
+                </p>
             </div>
+            <div className="rounded-xl border bg-card p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Créditos Cursados
+              </span>
+            </div>
+
+            <p className="text-2xl font-semibold">
+              {kardex.creditosCursados}
+              <span className="text-sm text-muted-foreground">
+                {" "} créditos
+              </span>
+            </p>
+          </div>
             <div className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="rounded-lg bg-muted p-2"><GraduationCap className="h-4 w-4 text-muted-foreground" /></div>
@@ -388,7 +431,11 @@ export function Kardex() {
                 </div>
                 <div className="rounded-xl border bg-card p-3">
                   <span className="text-xs text-muted-foreground">Créditos Aprobados</span>
-                  <p className="text-xl font-semibold">{kardex.creditosAprobados} <span className="text-sm text-muted-foreground">/ {kardex.creditosTotales}</span></p>
+                  <p className="text-xl font-semibold">{kardex.creditosAprobados}
+                    <span className="text-sm text-muted-foreground">
+                      {" "} / {kardex.creditosCarrera}
+                    </span>
+                  </p>
                 </div>
                 <div className="rounded-xl border bg-card p-3">
                   <span className="text-xs text-muted-foreground">Avance</span>
