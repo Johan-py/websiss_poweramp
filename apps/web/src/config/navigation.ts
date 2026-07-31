@@ -50,11 +50,19 @@ export const navItems: NavItem[] = [
 const docenteShortcut: NavItem = { to: "/notas", label: "Subir Notas", icon: BarChart3, roles: ["DOCENTE"] };
 
 export function getNavForRole(rol?: string): NavItem[] {
-  const items = navItems.filter((item) => item.roles.includes((rol ?? "ESTUDIANTE") as Rol));
+  if (!rol) return [];
+
+  const items = navItems.filter((item) =>
+    item.roles.includes(rol as Rol)
+  );
+
   if (rol === "DOCENTE") {
     const index = items.findIndex((i) => i.to === "/notas");
-    if (index >= 0) items.splice(index + 1, 0, docenteShortcut);
+    if (index >= 0) {
+      items.splice(index + 1, 0, docenteShortcut);
+    }
   }
+
   return items;
 }
 

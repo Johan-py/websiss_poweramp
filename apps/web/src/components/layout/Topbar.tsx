@@ -4,6 +4,7 @@ import {
   Search,
   Bell,
   Command,
+  Menu,
   User,
   Settings,
 } from "lucide-react";
@@ -27,9 +28,10 @@ import { getNavForRole, getRoleLabel } from "@/config/navigation";
 
 interface TopbarProps {
   breadcrumbItems?: { label: string; href?: string }[];
+  onOpenMobile?: () => void;
 }
 
-export function Topbar({ breadcrumbItems }: TopbarProps) {
+export function Topbar({ breadcrumbItems, onOpenMobile }: TopbarProps) {
   const { perfil, logout } = useAuth();
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -39,26 +41,48 @@ export function Topbar({ breadcrumbItems }: TopbarProps) {
 
   return (
     <>
-      <header className="flex h-topbar items-center gap-4 border-b bg-background px-4 lg:px-6">
+      <header className="flex h-topbar items-center gap-2 sm:gap-4 border-b bg-background px-3 sm:px-4 lg:px-6">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenMobile}
+          className="lg:hidden text-muted-foreground"
+          aria-label="Abrir menú"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+
         {breadcrumbItems && breadcrumbItems.length > 0 ? (
-          <Breadcrumb items={breadcrumbItems} />
+          <Breadcrumb items={breadcrumbItems} className="hidden md:flex" />
         ) : (
-          <div className="flex-1" />
+          <div className="hidden md:block flex-1" />
         )}
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+          <button
+            onClick={() => setCommandOpen(true)}
+            aria-label="Buscar"
+            className={cn(
+              "lg:hidden flex h-9 w-9 items-center justify-center rounded-lg border bg-background",
+              "text-muted-foreground transition-all duration-150",
+              "hover:border-foreground/20 hover:text-foreground",
+            )}
+          >
+            <Search className="h-4 w-4" />
+          </button>
+
           <button
             onClick={() => setCommandOpen(true)}
             className={cn(
-              "flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-sm",
+              "hidden lg:flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-sm",
               "text-muted-foreground transition-all duration-150",
               "hover:border-foreground/20 hover:text-foreground",
-              "w-48 lg:w-64",
+              "w-48 xl:w-64",
             )}
           >
             <Search className="h-3.5 w-3.5 shrink-0" />
             <span className="flex-1 text-left text-xs">Buscar...</span>
-            <kbd className="hidden lg:inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <kbd className="hidden xl:inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
               <Command className="h-2.5 w-2.5" />K
             </kbd>
           </button>

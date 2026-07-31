@@ -310,6 +310,70 @@ export async function academicoRoutes(app: FastifyInstance) {
     }
   );
 
+  // ─── Crear evaluación (docente / admin) ────────────────
+  app.post<{
+    Body: {
+      ofertaId: string;
+      titulo: string;
+      descripcion?: string;
+      tipoEvaluacion?: string;
+      peso?: number;
+      puntajeMaximo?: number;
+      fecha?: string;
+      publicada?: boolean;
+    };
+  }>(
+    "/api/v1/evaluaciones",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR", "DOCENTE"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+      const { ofertaId, titulo, descripcion, tipoEvaluacion = "PARCIAL", peso, puntajeMaximo, fecha, publicada = false } = req.body;
+      if (!ofertaId || !titulo?.trim()) {
+        return reply.status(400).send({ message: "ofertaId y titulo son requeridos" });
+      }
+      if (peso != null && (Number.isNaN(Number(peso)) || Number(peso) <= 0)) {
+        return reply.status(400).send({ message: "El peso debe ser mayor a 0" });
+      }
+      if (puntajeMaximo != null && (Number.isNaN(Number(puntajeMaximo)) || Number(puntajeMaximo) <= 0)) {
+        return reply.status(400).send({ message: "El puntaje máximo debe ser mayor a 0" });
+      }
+
+      const oferta = await app.prisma.ofertaAcademica.findUnique({ where: { id: ofertaId } });
+      if (!oferta) return reply.status(404).send({ message: "Oferta académica no encontrada" });
+
+      if (req.userRole === "DOCENTE") {
+        const docente = await getDocente(req);
+        if (!docente || oferta.docenteId !== docente.id) {
+          return reply.status(403).send({ message: "Solo puedes crear evaluaciones en tus materias" });
+        }
+      }
+
+      try {
+        const evaluacion = await app.prisma.evaluacion.create({
+          data: {
+            ofertaId,
+            titulo: titulo.trim(),
+            descripcion: descripcion?.trim() || null,
+            tipoEvaluacion: tipoEvaluacion as any,
+            peso: peso != null ? Number(peso) : 0,
+            puntajeMaximo: puntajeMaximo != null ? Number(puntajeMaximo) : 20,
+            fecha: fecha ? new Date(fecha) : null,
+            publicada,
+          },
+          include: { oferta: { include: { materia: true, periodo: true } } },
+        });
+        await app.prisma.auditoria.create({
+          data: { perfilId: req.userId!, accion: "CREATE", entidad: "Evaluacion", entidadId: evaluacion.id, detalle: { ofertaId, titulo, tipoEvaluacion, peso, publicada } },
+        });
+        return reply.status(201).send(evaluacion);
+      } catch (error) {
+        return reply.status(500).send({ message: "No se pudo crear la evaluación" });
+      }
+    },
+  );
+
   // ─── Notas ──────────────────────────────────────────────
   app.get(
     "/api/v1/notas",

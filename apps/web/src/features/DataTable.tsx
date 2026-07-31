@@ -177,7 +177,7 @@ export function DataTable<T>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">
             {sorted.length} registros
           </span>
@@ -185,27 +185,34 @@ export function DataTable<T>({
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={safePage === 0}
+              aria-label="Página anterior"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors hover:bg-accent disabled:opacity-30"
             >
               <ChevronDown className="h-4 w-4 rotate-90" />
             </button>
-            {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i)}
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors",
-                  safePage === i
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent",
-                )}
-              >
-                {i + 1}
-              </button>
-            ))}
+            <div className="hidden sm:flex items-center gap-1">
+              {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors",
+                    safePage === i
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-accent",
+                  )}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <span className="sm:hidden text-xs text-muted-foreground px-1">
+              {safePage + 1} / {totalPages}
+            </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={safePage === totalPages - 1}
+              aria-label="Página siguiente"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors hover:bg-accent disabled:opacity-30"
             >
               <ChevronDown className="h-4 w-4 -rotate-90" />

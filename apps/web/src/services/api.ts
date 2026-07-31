@@ -75,6 +75,16 @@ export const api = {
   },
   evaluaciones: {
     list: () => fetchJson<any[]>("/evaluaciones"),
+    create: (data: {
+      ofertaId: string;
+      titulo: string;
+      descripcion?: string;
+      tipoEvaluacion?: string;
+      peso?: number;
+      puntajeMaximo?: number;
+      fecha?: string;
+      publicada?: boolean;
+    }) => fetchJson<any>("/evaluaciones", { method: "POST", body: JSON.stringify(data) }),
   },
   notas: {
     list: () => fetchJson<any[]>("/notas"),

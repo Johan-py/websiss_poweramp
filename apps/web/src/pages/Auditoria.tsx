@@ -24,7 +24,7 @@ export function AuditoriaPage() {
       />
       <div className="rounded-xl border bg-card divide-y">
         {logs.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-10">No hay registros de auditoría</p>
+          <p className="text-sm text-muted-foreground text-center py-10">comin soon</p>
         ) : (
           logs.map((log: any) => (
             <div key={log.id} className="flex items-start gap-4 p-4 transition-colors hover:bg-muted/20">
