@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
-import { Search, Award, TrendingUp, GraduationCap, BookOpen, ChevronDown, ChevronRight, UserCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, Award, TrendingUp, GraduationCap, BookOpen, ChevronDown, ChevronRight, UserCircle, FileText, Download } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { PageHeader } from "@/features/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
@@ -21,6 +31,39 @@ interface KardexData {
   promedioPonderadoGlobal: number;
 }
 
+interface SummaryStats {
+  aprobadas: number;
+  reprobadas: number;
+  enCurso: number;
+  canceladas: number;
+  totalMaterias: number;
+}
+
+const estadoLabel = (estado: string) => {
+  if (estado === "COMPLETADA") return "Aprobada";
+  if (estado === "ACTIVA") return "En curso";
+  if (estado === "CANCELADA") return "Cancelada";
+  if (estado === "RETIRADA") return "Retirada";
+  return estado;
+};
+
+const estadoResumen = (m: { nota: number | null; estado: string }): keyof SummaryStats => {
+  if (m.nota != null) return m.nota >= 14 ? "aprobadas" : "reprobadas";
+  if (m.estado === "ACTIVA") return "enCurso";
+  return "canceladas";
+};
+
+function computeSummary(kardex: KardexData): SummaryStats {
+  const stats: SummaryStats = { aprobadas: 0, reprobadas: 0, enCurso: 0, canceladas: 0, totalMaterias: 0 };
+  for (const p of kardex.periodos) {
+    for (const m of p.materias) {
+      stats.totalMaterias++;
+      stats[estadoResumen(m)]++;
+    }
+  }
+  return stats;
+}
+
 export function Kardex() {
   const { perfil } = useAuth();
   const rol = perfil?.rol;
@@ -31,6 +74,8 @@ export function Kardex() {
   const [kardex, setKardex] = useState<KardexData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (isStudent) {
@@ -64,12 +109,11 @@ export function Kardex() {
     });
   };
 
+  const summary = useMemo(() => (kardex ? computeSummary(kardex) : null), [kardex]);
+
   const notaColor = (n: number | null) => {
     if (n == null) return "text-muted-foreground";
-    if (n >= 90) return "text-success";
-    if (n >= 70) return "text-primary";
-    if (n >= 14) return "text-warning";
-    return "text-destructive";
+    return n >= 14 ? "text-success" : "text-destructive";
   };
 
   const estadoBadge = (estado: string) => {
@@ -79,12 +123,122 @@ export function Kardex() {
     return <Badge variant="secondary">{estado}</Badge>;
   };
 
+  const generarPdf = () => {
+    if (!kardex || !summary) return;
+    setDownloading(true);
+    try {
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 14;
+      let y = 18;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Kardex Académico", margin, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(`${kardex.estudiante.nombres} ${kardex.estudiante.apellidos}`, margin, y);
+      y += 5.5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.text(`Cédula: ${kardex.estudiante.cedula}`, margin, y);
+      doc.text(`Email: ${kardex.estudiante.email}`, margin + 80, y);
+      y += 5;
+      doc.text(`Carrera: ${kardex.estudiante.carrera}`, margin, y);
+      y += 8;
+
+      doc.setFillColor(59, 130, 246);
+      doc.rect(margin, y - 4.5, pageWidth - margin * 2, 13, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      const labelY = y + 1.5;
+      doc.text(`Promedio Global`, margin + 3, labelY);
+      doc.text(`Promedio Ponderado`, margin + 43, labelY);
+      doc.text(`Créditos Aprobados`, margin + 90, labelY);
+      doc.text(`Avance`, margin + 138, labelY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`${kardex.promedioGlobal}`, margin + 3, labelY + 5);
+      doc.text(`${kardex.promedioPonderadoGlobal}`, margin + 43, labelY + 5);
+      doc.text(`${kardex.creditosAprobados} de ${kardex.creditosTotales}`, margin + 90, labelY + 5);
+      doc.text(`${kardex.avance}%`, margin + 138, labelY + 5);
+      doc.setTextColor(0, 0, 0);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(
+        `Materias: ${summary.aprobadas} aprobadas · ${summary.reprobadas} reprobadas · ${summary.enCurso} en curso · ${summary.canceladas} canceladas / retiradas`,
+        margin,
+        y,
+      );
+      y += 6;
+
+      for (const periodo of kardex.periodos) {
+        if (y > 250) {
+          doc.addPage();
+          y = 16;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text(`Periodo ${periodo.periodo}`, margin, y);
+        y += 2.5;
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margin, right: margin },
+          head: [["Materia", "Código", "Docente", "Créd.", "Nota", "Estado"]],
+          body: periodo.materias.map((m) => [
+            m.materia,
+            m.codigo,
+            m.docente,
+            String(m.creditos),
+            m.nota != null ? m.nota.toFixed(2) : "-",
+            estadoLabel(m.estado),
+          ]),
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: "bold" },
+          alternateRowStyles: { fillColor: [245, 247, 250] },
+        });
+        y = (doc as any).lastAutoTable?.finalY ?? y;
+        y += 8;
+      }
+
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(`Generado el ${new Date().toLocaleDateString("es-ES")}`, margin, 290);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, 290, { align: "right" });
+      }
+
+      doc.save(`Kardex-${kardex.estudiante.apellidos}-${kardex.estudiante.nombres}.pdf`);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl">
       <PageHeader
         title="Kardex Académico"
         description={isStudent ? "Tu historial académico completo" : "Historial académico completo del estudiante"}
-      />
+      >
+        {kardex && (
+          <>
+            <Button size="sm" variant="outline" onClick={() => setSummaryOpen(true)}>
+              <FileText className="h-4 w-4 mr-1.5" /> Resumen
+            </Button>
+            <Button size="sm" onClick={generarPdf} disabled={downloading}>
+              <Download className="h-4 w-4 mr-1.5" /> {downloading ? "Generando..." : "Descargar Kardex PDF"}
+            </Button>
+          </>
+        )}
+      </PageHeader>
 
       {isStudent ? (
         <div className="flex items-center gap-3 rounded-xl border bg-card p-4 max-w-md">
@@ -117,7 +271,7 @@ export function Kardex() {
           <div className="grid gap-4 sm:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/60" />)}</div>
           {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted/60" />)}
         </div>
-      ) : kardex ? (
+      ) : kardex && summary ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border bg-card p-4">
@@ -139,7 +293,7 @@ export function Kardex() {
                 <div className="rounded-lg bg-success/10 p-2"><Award className="h-4 w-4 text-success" /></div>
                 <span className="text-xs font-medium text-muted-foreground">Créditos Aprobados</span>
               </div>
-              <p className="text-2xl font-semibold">{kardex.creditosAprobados}</p>
+              <p className="text-2xl font-semibold">{kardex.creditosAprobados} <span className="text-sm text-muted-foreground">/ {kardex.creditosTotales}</span></p>
             </div>
             <div className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-3 mb-2">
@@ -180,6 +334,7 @@ export function Kardex() {
                             <th className="h-9 px-4 text-left text-xs font-medium text-muted-foreground">Materia</th>
                             <th className="h-9 px-4 text-left text-xs font-medium text-muted-foreground hidden md:table-cell">Docente</th>
                             <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Créditos</th>
+                            <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Nota</th>
                             <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Estado</th>
                           </tr>
                         </thead>
@@ -190,6 +345,7 @@ export function Kardex() {
                               <td className="h-11 px-4 text-sm font-medium">{mat.materia}</td>
                               <td className="h-11 px-4 text-sm text-muted-foreground hidden md:table-cell">{mat.docente}</td>
                               <td className="h-11 px-4 text-sm text-center">{mat.creditos}</td>
+                              <td className={cn("h-11 px-4 text-center", notaColor(mat.nota))}>{mat.nota != null ? mat.nota.toFixed(2) : "—"}</td>
                               <td className="h-11 px-4 text-center">{estadoBadge(mat.estado)}</td>
                             </tr>
                           ))}
@@ -209,6 +365,75 @@ export function Kardex() {
           <p className="text-xs text-muted-foreground">Elige un estudiante para ver su historial académico</p>
         </div>
       )}
+
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto scrollbar-thin">
+          <DialogHeader>
+            <DialogTitle>Resumen del Kardex</DialogTitle>
+            <DialogDescription>
+              {kardex?.estudiante.nombres} {kardex?.estudiante.apellidos} · {kardex?.estudiante.carrera}
+            </DialogDescription>
+          </DialogHeader>
+
+          {kardex && summary && (
+            <div className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border bg-card p-3">
+                  <span className="text-xs text-muted-foreground">Promedio Global</span>
+                  <p className="text-xl font-semibold">{kardex.promedioGlobal}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-3">
+                  <span className="text-xs text-muted-foreground">Promedio Ponderado</span>
+                  <p className="text-xl font-semibold">{kardex.promedioPonderadoGlobal}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-3">
+                  <span className="text-xs text-muted-foreground">Créditos Aprobados</span>
+                  <p className="text-xl font-semibold">{kardex.creditosAprobados} <span className="text-sm text-muted-foreground">/ {kardex.creditosTotales}</span></p>
+                </div>
+                <div className="rounded-xl border bg-card p-3">
+                  <span className="text-xs text-muted-foreground">Avance</span>
+                  <p className="text-xl font-semibold">{kardex.avance}%</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="success">{summary.aprobadas} aprobadas</Badge>
+                <Badge variant="destructive">{summary.reprobadas} reprobadas</Badge>
+                <Badge variant="default">{summary.enCurso} en curso</Badge>
+                <Badge variant="secondary">{summary.canceladas} canceladas / retiradas</Badge>
+                <Badge variant="outline">{summary.totalMaterias} materias en total</Badge>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/20">
+                      <th className="h-9 px-4 text-left text-xs font-medium text-muted-foreground">Periodo</th>
+                      <th className="h-9 px-4 text-left text-xs font-medium text-muted-foreground">Materia</th>
+                      <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Créditos</th>
+                      <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Nota</th>
+                      <th className="h-9 px-4 text-center text-xs font-medium text-muted-foreground">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kardex.periodos.map((periodo) => (
+                      periodo.materias.map((mat, idx) => (
+                        <tr key={`${periodo.periodo}-${idx}`} className="border-b border-border last:border-0 hover:bg-muted/20">
+                          <td className="h-10 px-4 text-xs text-muted-foreground">{periodo.periodo}</td>
+                          <td className="h-10 px-4 text-sm font-medium">{mat.materia}</td>
+                          <td className="h-10 px-4 text-sm text-center">{mat.creditos}</td>
+                          <td className={cn("h-10 px-4 text-center", notaColor(mat.nota))}>{mat.nota != null ? mat.nota.toFixed(2) : "—"}</td>
+                          <td className="h-10 px-4 text-center">{estadoBadge(mat.estado)}</td>
+                        </tr>
+                      ))
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

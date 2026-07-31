@@ -295,6 +295,24 @@ export async function academicoRoutes(app: FastifyInstance) {
       orderBy: { oferta: { periodo: { fechaInicio: "desc" } } },
     });
 
+    const evaluaciones = await app.prisma.evaluacion.findMany({
+      where: { ofertaId: { in: inscripciones.map((i) => i.ofertaId) } },
+      include: {
+        notas: { where: { estudianteId: req.params.estudianteId } },
+      },
+    });
+
+    const notaPorOferta = new Map<string, number | null>();
+    for (const eva of evaluaciones) {
+      const nota = eva.notas[0];
+      if (!nota || Number(eva.peso) === 0) continue;
+      const peso = Number(eva.peso);
+      const puntajeMaximo = Number(eva.puntajeMaximo) || 20;
+      const valorEscalado = (Number(nota.valor) / puntajeMaximo) * 20;
+      const actual = notaPorOferta.get(eva.ofertaId);
+      notaPorOferta.set(eva.ofertaId, (actual ?? 0) + valorEscalado * peso);
+    }
+
     const periodosMap = new Map<string, typeof inscripciones>();
     for (const ins of inscripciones) {
       const periodo = ins.oferta.periodo.codigo;
@@ -302,17 +320,26 @@ export async function academicoRoutes(app: FastifyInstance) {
       periodosMap.get(periodo)!.push(ins);
     }
 
+    const todasMaterias: { nota: number | null; creditos: number; estado: string }[] = [];
+
     const periodos = Array.from(periodosMap.entries()).map(([codigo, inscs]) => {
-      const periodoData = inscs[0].oferta.periodo;
-      const materias = inscs.map((i) => ({
-        materiaId: i.oferta.materia.id,
-        materia: i.oferta.materia.nombre,
-        codigo: i.oferta.materia.codigo,
-        docente: `${i.oferta.docente.perfil.nombre} ${i.oferta.docente.perfil.apellido}`,
-        creditos: i.oferta.materia.creditos,
-        nota: null as number | null,
-        estado: i.estado,
-      }));
+      const materias = inscs.map((i) => {
+        const sumPonderada = notaPorOferta.get(i.ofertaId) ?? null;
+        const notasEva = evaluaciones.filter((e) => e.ofertaId === i.ofertaId && e.notas[0]);
+        const pesoTotal = notasEva.reduce((s, e) => s + Number(e.peso), 0);
+        const nota = sumPonderada != null && pesoTotal > 0 ? sumPonderada / pesoTotal : null;
+        return {
+          materiaId: i.oferta.materia.id,
+          materia: i.oferta.materia.nombre,
+          codigo: i.oferta.materia.codigo,
+          docente: `${i.oferta.docente.perfil.nombre} ${i.oferta.docente.perfil.apellido}`,
+          creditos: i.oferta.materia.creditos,
+          nota: nota != null ? Math.round(nota * 100) / 100 : null,
+          estado: i.estado,
+        };
+      });
+
+      todasMaterias.push(...materias);
 
       const totalCreditos = materias.reduce((s, m) => s + m.creditos, 0);
       const promedios = materias.filter((m) => m.nota != null);
@@ -327,7 +354,16 @@ export async function academicoRoutes(app: FastifyInstance) {
     const creditosAprobados = todasNotas.reduce((s, i) => s + i.oferta.materia.creditos, 0);
     const creditosTotales = inscripciones.reduce((s, i) => s + i.oferta.materia.creditos, 0);
     const creditosCarrera =(estudiante.carrera?.duracionSemestres ?? 4) * 60;
-    
+
+    const notasConValor = todasMaterias.filter((m) => m.nota != null) as { nota: number; creditos: number }[];
+    const promedioGlobal = notasConValor.length > 0
+      ? notasConValor.reduce((s, m) => s + m.nota, 0) / notasConValor.length
+      : 0;
+    const creditosConNota = notasConValor.reduce((s, m) => s + m.creditos, 0);
+    const promedioPonderadoGlobal = creditosConNota > 0
+      ? notasConValor.reduce((s, m) => s + m.nota * m.creditos, 0) / creditosConNota
+      : 0;
+
     return {
       estudiante: {
         id: estudiante.id,
@@ -341,8 +377,8 @@ export async function academicoRoutes(app: FastifyInstance) {
       creditosAprobados,
       creditosTotales,
       avance: Math.min(100, Math.round((creditosAprobados / creditosCarrera) * 100)),
-      promedioGlobal: 0,
-      promedioPonderadoGlobal: 0,
+      promedioGlobal: Math.round(promedioGlobal * 100) / 100,
+      promedioPonderadoGlobal: Math.round(promedioPonderadoGlobal * 100) / 100,
     };
   });
 
