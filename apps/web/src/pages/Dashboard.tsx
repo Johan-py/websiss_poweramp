@@ -629,8 +629,28 @@ function TeacherDashboard() {
 }
 
 export function Dashboard() {
-  const { perfil } = useAuth();
-  if (perfil?.rol === "ESTUDIANTE") return <StudentDashboard />;
-  if (perfil?.rol === "DOCENTE") return <TeacherDashboard />;
-  return <AdminDashboard />;
+  const { perfil, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        Cargando...
+      </div>
+    );
+  }
+
+  switch (perfil?.rol) {
+    case "ADMIN":
+    case "COORDINADOR":
+      return <AdminDashboard />;
+
+    case "DOCENTE":
+      return <TeacherDashboard />;
+
+    case "ESTUDIANTE":
+      return <StudentDashboard />;
+
+    default:
+      return null;
+  }
 }

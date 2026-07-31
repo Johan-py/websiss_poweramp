@@ -100,7 +100,7 @@ export function CarrerasPage() {
                 <span>{c.modalidad}</span>
               </div>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-                Malla curricular
+                MC
                 <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </span>
             </div>
