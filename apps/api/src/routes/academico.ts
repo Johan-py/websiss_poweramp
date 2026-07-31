@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { Prisma } from "@websiss/database";
+import { hashSync } from "bcryptjs";
 
 const estudianteInclude = {
   perfil: { select: { id: true, nombre: true, apellido: true, email: true, cedula: true, telefono: true, activo: true } },
@@ -63,6 +64,141 @@ export async function academicoRoutes(app: FastifyInstance) {
       orderBy: { perfil: { apellido: "asc" } },
     });
   });
+
+  // ─── Registrar estudiante ──────────────────────────────
+  app.post<{ Body: { nombre: string; apellido: string; cedula: string; email: string; telefono?: string; direccion?: string; password: string; codigoEstudiante: string; carreraId: string; fechaIngreso?: string } }>(
+    "/api/v1/estudiantes",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+
+      const { nombre, apellido, cedula, email, telefono, direccion, password, codigoEstudiante, carreraId, fechaIngreso } = req.body;
+
+      if (!nombre?.trim() || !apellido?.trim() || !cedula?.trim() || !email?.trim() || !password?.trim() || !codigoEstudiante?.trim() || !carreraId) {
+        return reply.status(400).send({ message: "nombre, apellido, cedula, email, password, codigoEstudiante y carreraId son requeridos" });
+      }
+      if (password.length < 6) {
+        return reply.status(400).send({ message: "La contraseña debe tener al menos 6 caracteres" });
+      }
+
+      try {
+        const { perfil, estudiante } = await app.prisma.$transaction(async (tx) => {
+          const perfil = await tx.perfil.create({
+            data: {
+              nombre: nombre.trim(),
+              apellido: apellido.trim(),
+              cedula: cedula.trim(),
+              email: email.trim().toLowerCase(),
+              telefono: telefono?.trim() || null,
+              direccion: direccion?.trim() || null,
+              password: hashSync(password, 10),
+              rol: "ESTUDIANTE",
+              activo: true,
+            },
+          });
+
+          const estudiante = await tx.estudiante.create({
+            data: {
+              perfilId: perfil.id,
+              carreraId,
+              codigoEstudiante: codigoEstudiante.trim(),
+              fechaIngreso: fechaIngreso ? new Date(fechaIngreso) : undefined,
+            },
+            include: estudianteInclude,
+          });
+
+          return { perfil, estudiante };
+        });
+
+        await app.prisma.auditoria.create({
+          data: {
+            perfilId: req.userId!,
+            accion: "CREATE",
+            entidad: "Estudiante",
+            entidadId: estudiante.id,
+            detalle: { codigoEstudiante, carreraId, email },
+          },
+        });
+
+        return reply.status(201).send(estudiante);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const campo = (error.meta?.target as string[] | undefined)?.join(", ");
+          return reply.status(409).send({ message: `Ya existe un registro con ese ${campo ?? "valor"} (email, cédula o código)` });
+        }
+        return reply.status(500).send({ message: "No se pudo registrar el estudiante" });
+      }
+    },
+  );
+
+  // ─── Registrar docente ─────────────────────────────────
+  app.post<{ Body: { nombre: string; apellido: string; cedula: string; email: string; telefono?: string; direccion?: string; password: string; codigoDocente: string; especialidad?: string } }>(
+    "/api/v1/docentes",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+
+      const { nombre, apellido, cedula, email, telefono, direccion, password, codigoDocente, especialidad } = req.body;
+
+      if (!nombre?.trim() || !apellido?.trim() || !cedula?.trim() || !email?.trim() || !password?.trim() || !codigoDocente?.trim()) {
+        return reply.status(400).send({ message: "nombre, apellido, cedula, email, password y codigoDocente son requeridos" });
+      }
+      if (password.length < 6) {
+        return reply.status(400).send({ message: "La contraseña debe tener al menos 6 caracteres" });
+      }
+
+      try {
+        const { perfil, docente } = await app.prisma.$transaction(async (tx) => {
+          const perfil = await tx.perfil.create({
+            data: {
+              nombre: nombre.trim(),
+              apellido: apellido.trim(),
+              cedula: cedula.trim(),
+              email: email.trim().toLowerCase(),
+              telefono: telefono?.trim() || null,
+              direccion: direccion?.trim() || null,
+              password: hashSync(password, 10),
+              rol: "DOCENTE",
+              activo: true,
+            },
+          });
+
+          const docente = await tx.docente.create({
+            data: {
+              perfilId: perfil.id,
+              codigoDocente: codigoDocente.trim(),
+              especialidad: especialidad?.trim() || null,
+            },
+            include: docenteInclude,
+          });
+
+          return { perfil, docente };
+        });
+
+        await app.prisma.auditoria.create({
+          data: {
+            perfilId: req.userId!,
+            accion: "CREATE",
+            entidad: "Docente",
+            entidadId: docente.id,
+            detalle: { codigoDocente, email },
+          },
+        });
+
+        return reply.status(201).send(docente);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const campo = (error.meta?.target as string[] | undefined)?.join(", ");
+          return reply.status(409).send({ message: `Ya existe un registro con ese ${campo ?? "valor"} (email, cédula o código)` });
+        }
+        return reply.status(500).send({ message: "No se pudo registrar el docente" });
+      }
+    },
+  );
 
   // ─── Materias ───────────────────────────────────────────
   app.get("/api/v1/materias", async () => {

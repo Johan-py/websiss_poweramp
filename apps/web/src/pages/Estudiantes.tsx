@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
+import { RegistroEstudianteDialog } from "@/features/RegistroEstudianteDialog";
 import type { Column } from "@/features/DataTable";
 import { api } from "@/services/api";
 
@@ -56,8 +57,10 @@ const columns: Column<EstudianteRow>[] = [
 export function EstudiantesPage() {
   const [rows, setRows] = useState<EstudianteRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
     api.estudiantes.list().then((data) => {
       setRows(
         data.map((e: any) => ({
@@ -73,14 +76,17 @@ export function EstudiantesPage() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(load, []);
 
   return (
     <div className="space-y-6">
       <PageHeader title="Estudiantes" description="Gestión de estudiantes matriculados">
-        <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nuevo Estudiante</Button>
+        <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> Nuevo Estudiante</Button>
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable searchPlaceholder="Buscar por nombre, cédula o email..." loading={loading} pageSize={8} />
+      <RegistroEstudianteDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={load} />
     </div>
   );
 }

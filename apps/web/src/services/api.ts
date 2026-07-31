@@ -35,9 +35,32 @@ export const api = {
   estudiantes: {
     list: () => fetchJson<any[]>("/estudiantes"),
     get: (id: string) => fetchJson<any>(`/estudiantes/${id}`),
+    create: (data: {
+      nombre: string;
+      apellido: string;
+      cedula: string;
+      email: string;
+      telefono?: string;
+      direccion?: string;
+      password: string;
+      codigoEstudiante: string;
+      carreraId: string;
+      fechaIngreso?: string;
+    }) => fetchJson<any>("/estudiantes", { method: "POST", body: JSON.stringify(data) }),
   },
   docentes: {
     list: () => fetchJson<any[]>("/docentes"),
+    create: (data: {
+      nombre: string;
+      apellido: string;
+      cedula: string;
+      email: string;
+      telefono?: string;
+      direccion?: string;
+      password: string;
+      codigoDocente: string;
+      especialidad?: string;
+    }) => fetchJson<any>("/docentes", { method: "POST", body: JSON.stringify(data) }),
   },
   materias: {
     list: () => fetchJson<any[]>("/materias"),
