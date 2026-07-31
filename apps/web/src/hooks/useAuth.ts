@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const TOKEN_KEY = "ws_token";
 const PERFIL_KEY = "ws_perfil";
-
+const API = `${import.meta.env.VITE_API_URL}/api/v1`;
 function getStoredToken(): string | null {
   try {
     return localStorage.getItem(TOKEN_KEY);
@@ -69,7 +69,7 @@ export function useAuth() {
       return;
     }
 
-    fetch("/api/v1/auth/me", {
+    fetch(`${API}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -91,9 +91,11 @@ export function useAuth() {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch("/api/v1/auth/login", {
+    const res = await fetch(`${API}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ email, password }),
     });
 
@@ -103,6 +105,7 @@ export function useAuth() {
     }
 
     const data = await res.json();
+
     setStoredToken(data.token);
     setStoredPerfil(data.perfil);
     setUser({ email: data.perfil.email });
