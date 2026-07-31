@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
 import { cn } from "@/lib/utils";
 import type { Column } from "@/features/DataTable";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 interface OfertaRow {
@@ -79,18 +80,27 @@ const columns: Column<OfertaRow>[] = [
 ];
 
 export function OfertaAcademicaPage() {
+  const { perfil } = useAuth();
+  const rol = perfil?.rol;
   const [rows, setRows] = useState<OfertaRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.ofertas.list().then((data) => {
+      const filtered = rol === "DOCENTE"
+        ? data.filter((o: any) => o.docenteId === perfil?.docente?.id)
+        : data;
       setRows(
-        data.map((o: any) => ({
+        filtered.map((o: any) => ({
           id: o.id,
           materia: o.materia?.nombre ?? "",
           codigo: o.materia?.codigo ?? "",
           docente: o.docente?.perfil ? `${o.docente.perfil.nombre} ${o.docente.perfil.apellido}` : "",
-          horario: o.horario ? JSON.stringify(o.horario) : "",
+          horario: o.horario
+            ? (Array.isArray(o.horario)
+                ? o.horario.map((h: any) => `${h.dia ?? ""} ${h.hora_inicio ?? ""}-${h.hora_fin ?? ""}`).join(", ")
+                : `${o.horario.dia ?? ""} ${o.horario.hora_inicio ?? ""}-${o.horario.hora_fin ?? ""}`)
+            : "",
           cupoActual: o.cupoMaximo - o.cupoDisponible,
           cupoMaximo: o.cupoMaximo,
           estado: !o.activo ? "cerrada" : o.cupoDisponible <= 0 ? "completa" : "abierta",
@@ -98,12 +108,19 @@ export function OfertaAcademicaPage() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [rol, perfil?.docente?.id]);
+
+  const canCreate = rol === "ADMIN" || rol === "COORDINADOR";
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Oferta Académica" description="Materias ofertadas por periodo">
-        <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Oferta</Button>
+      <PageHeader
+        title="Oferta Académica"
+        description={rol === "DOCENTE" ? "Materias que impartes este periodo" : "Materias ofertadas por periodo"}
+      >
+        {canCreate && (
+          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Oferta</Button>
+        )}
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable searchPlaceholder="Buscar materia o docente..." loading={loading} pageSize={8} />
     </div>

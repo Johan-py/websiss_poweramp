@@ -1,51 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  GraduationCap,
-  BookOpen,
-  Users,
-  Calendar,
-  DollarSign,
-  FileSpreadsheet,
-  Settings,
-  ChevronLeft,
-  PanelRightOpen,
-  FileText,
-  ClipboardCheck,
-  BarChart3,
-  Shield,
-  UserCircle,
-  Library,
-} from "lucide-react";
+import { ChevronLeft, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: React.ElementType;
-  badge?: string;
-}
-
-const mainNav: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/estudiantes", label: "Estudiantes", icon: Users },
-  { to: "/docentes", label: "Docentes", icon: GraduationCap },
-  { to: "/carreras", label: "Carreras", icon: Library },
-  { to: "/materias", label: "Materias", icon: BookOpen },
-  { to: "/oferta-academica", label: "Oferta Académica", icon: FileSpreadsheet },
-  { to: "/inscripciones", label: "Inscripciones", icon: ClipboardCheck },
-  { to: "/evaluaciones", label: "Evaluaciones", icon: FileText },
-  { to: "/notas", label: "Notas", icon: BarChart3 },
-  { to: "/kardex", label: "Kardex", icon: FileText },
-  { to: "/pagos", label: "Pagos", icon: DollarSign },
-  { to: "/calendario", label: "Calendario", icon: Calendar },
-  { to: "/recursos", label: "Recursos", icon: Library },
-  { to: "/perfil", label: "Perfil", icon: UserCircle },
-  { to: "/configuracion", label: "Configuración", icon: Settings },
-  { to: "/auditoria", label: "Auditoría", icon: Shield },
-];
+import { useAuth } from "@/hooks/useAuth";
+import { getNavForRole } from "@/config/navigation";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -53,6 +12,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const { perfil } = useAuth();
+  const mainNav = getNavForRole(perfil?.rol);
+
   return (
     <aside
       className={cn(
@@ -122,11 +84,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{item.label}</span>
-              {item.badge && (
-                <span className="ml-auto rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                  {item.badge}
-                </span>
-              )}
             </NavLink>
           );
         })}

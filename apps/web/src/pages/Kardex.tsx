@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Search, Award, TrendingUp, GraduationCap, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Award, TrendingUp, GraduationCap, BookOpen, ChevronDown, ChevronRight, UserCircle } from "lucide-react";
 import { PageHeader } from "@/features/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 interface KardexData {
@@ -21,6 +22,9 @@ interface KardexData {
 }
 
 export function Kardex() {
+  const { perfil } = useAuth();
+  const rol = perfil?.rol;
+  const isStudent = rol === "ESTUDIANTE";
   const [search, setSearch] = useState("");
   const [estudiantes, setEstudiantes] = useState<any[]>([]);
   const [selectedEst, setSelectedEst] = useState("");
@@ -29,13 +33,17 @@ export function Kardex() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (isStudent) {
+      if (perfil?.estudiante?.id) setSelectedEst(perfil.estudiante.id);
+      return;
+    }
     api.estudiantes.list().then((data) => {
       setEstudiantes(data);
       if (data.length > 0 && !selectedEst) {
         setSelectedEst(data[0].id);
       }
     });
-  }, []);
+  }, [isStudent, perfil?.estudiante?.id]);
 
   useEffect(() => {
     if (!selectedEst) return;
@@ -60,7 +68,7 @@ export function Kardex() {
     if (n == null) return "text-muted-foreground";
     if (n >= 90) return "text-success";
     if (n >= 70) return "text-primary";
-    if (n >= 60) return "text-warning";
+    if (n >= 14) return "text-warning";
     return "text-destructive";
   };
 
@@ -73,23 +81,36 @@ export function Kardex() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <PageHeader title="Kardex Académico" description="Historial académico completo del estudiante" />
+      <PageHeader
+        title="Kardex Académico"
+        description={isStudent ? "Tu historial académico completo" : "Historial académico completo del estudiante"}
+      />
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <select
-          value={selectedEst}
-          onChange={(e) => setSelectedEst(e.target.value)}
-          className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm appearance-none cursor-pointer transition-all hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {estudiantes.map((est: any) => (
-            <option key={est.id} value={est.id}>
-              {est.perfil?.nombre} {est.perfil?.apellido} - {est.perfil?.cedula}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-      </div>
+      {isStudent ? (
+        <div className="flex items-center gap-3 rounded-xl border bg-card p-4 max-w-md">
+          <div className="rounded-lg bg-primary/10 p-2"><UserCircle className="h-5 w-5 text-primary" /></div>
+          <div>
+            <p className="text-sm font-medium">{perfil?.nombre} {perfil?.apellido}</p>
+            <p className="text-xs text-muted-foreground">Mi kardex académico</p>
+          </div>
+        </div>
+      ) : (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <select
+            value={selectedEst}
+            onChange={(e) => setSelectedEst(e.target.value)}
+            className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm appearance-none cursor-pointer transition-all hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {estudiantes.map((est: any) => (
+              <option key={est.id} value={est.id}>
+                {est.perfil?.nombre} {est.perfil?.apellido} - {est.perfil?.cedula}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-4">

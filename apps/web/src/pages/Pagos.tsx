@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
 import type { Column } from "@/features/DataTable";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 interface PagoRow {
@@ -48,13 +49,19 @@ const columns: Column<PagoRow>[] = [
 ];
 
 export function PagosPage() {
+  const { perfil } = useAuth();
+  const rol = perfil?.rol;
+  const estudianteId = perfil?.estudiante?.id;
   const [rows, setRows] = useState<PagoRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.pagos.list().then((data) => {
+      const filtered = rol === "ESTUDIANTE"
+        ? data.filter((p: any) => p.estudianteId === estudianteId)
+        : data;
       setRows(
-        data.map((p: any) => ({
+        filtered.map((p: any) => ({
           id: p.id,
           estudiante: p.estudiante?.perfil ? `${p.estudiante.perfil.nombre} ${p.estudiante.perfil.apellido}` : "",
           concepto: p.concepto ?? "",
@@ -66,12 +73,17 @@ export function PagosPage() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [rol, estudianteId]);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Pagos" description="Gestión de pagos y matrículas">
-        <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Registrar Pago</Button>
+      <PageHeader
+        title={rol === "ESTUDIANTE" ? "Mis Pagos" : "Pagos"}
+        description={rol === "ESTUDIANTE" ? "Historial de tus pagos y matrícula" : "Gestión de pagos y matrículas"}
+      >
+        {rol !== "ESTUDIANTE" && (
+          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Registrar Pago</Button>
+        )}
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable loading={loading} />
     </div>

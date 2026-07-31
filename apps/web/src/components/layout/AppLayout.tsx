@@ -4,30 +4,14 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-const breadcrumbMap: Record<string, { label: string; href?: string }[]> = {
-  "/": [{ label: "Dashboard" }],
-  "/estudiantes": [{ label: "Estudiantes", href: "/estudiantes" }],
-  "/docentes": [{ label: "Docentes", href: "/docentes" }],
-  "/carreras": [{ label: "Carreras", href: "/carreras" }],
-  "/materias": [{ label: "Materias", href: "/materias" }],
-  "/oferta-academica": [{ label: "Oferta Académica", href: "/oferta-academica" }],
-  "/inscripciones": [{ label: "Inscripciones", href: "/inscripciones" }],
-  "/evaluaciones": [{ label: "Evaluaciones", href: "/evaluaciones" }],
-  "/notas": [{ label: "Notas", href: "/notas" }],
-  "/kardex": [{ label: "Kardex", href: "/kardex" }],
-  "/pagos": [{ label: "Pagos", href: "/pagos" }],
-  "/calendario": [{ label: "Calendario", href: "/calendario" }],
-  "/recursos": [{ label: "Recursos", href: "/recursos" }],
-  "/perfil": [{ label: "Perfil", href: "/perfil" }],
-  "/configuracion": [{ label: "Configuración", href: "/configuracion" }],
-  "/auditoria": [{ label: "Auditoría", href: "/auditoria" }],
-};
+import { useAuth } from "@/hooks/useAuth";
+import { getBreadcrumbs } from "@/config/navigation";
 
 export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
-  const breadcrumbItems = breadcrumbMap[location.pathname] ?? [];
+  const { perfil } = useAuth();
+  const breadcrumbItems = getBreadcrumbs(perfil?.rol, location.pathname);
 
   return (
     <TooltipProvider delayDuration={300}>

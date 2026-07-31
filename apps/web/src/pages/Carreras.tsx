@@ -3,9 +3,11 @@ import { Plus, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 export function CarrerasPage() {
+  const { perfil } = useAuth();
   const [carreras, setCarreras] = useState<any[]>([]);
 
   useEffect(() => {
@@ -15,7 +17,9 @@ export function CarrerasPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Carreras" description="Planes de estudio ofrecidos">
-        <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Carrera</Button>
+        {perfil?.rol !== "ESTUDIANTE" && (
+          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Carrera</Button>
+        )}
       </PageHeader>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {carreras.map((c: any) => (

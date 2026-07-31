@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
 import type { Column } from "@/features/DataTable";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 interface MateriaRow {
@@ -34,6 +35,7 @@ const columns: Column<MateriaRow>[] = [
 ];
 
 export function MateriasPage() {
+  const { perfil } = useAuth();
   const [rows, setRows] = useState<MateriaRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +58,9 @@ export function MateriasPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Materias" description="Catálogo de materias del plan de estudios">
-        <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Materia</Button>
+        {perfil?.rol !== "ESTUDIANTE" && (
+          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Materia</Button>
+        )}
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable searchPlaceholder="Buscar materia..." loading={loading} pageSize={8} />
     </div>

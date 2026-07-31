@@ -132,8 +132,9 @@ export async function academicoRoutes(app: FastifyInstance) {
   });
 
   // ─── Auditoría ──────────────────────────────────────────
-  app.get("/api/v1/auditoria", async () => {
+  app.get("/api/v1/auditoria", async (req: FastifyRequest<{ Querystring: { perfilId?: string } }>) => {
     return app.prisma.auditoria.findMany({
+      where: req.query.perfilId ? { perfilId: req.query.perfilId } : undefined,
       include: { perfil: { select: { nombre: true, apellido: true, email: true } } },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -273,4 +274,72 @@ export async function academicoRoutes(app: FastifyInstance) {
 
     return inscripcion;
   });
+
+  // ─── Subir nota (docente / admin) ──────────────────────
+  app.post<{ Body: { evaluacionId: string; estudianteId: string; valor: number; observacion?: string } }>(
+    "/api/v1/notas",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR", "DOCENTE"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+
+      const { evaluacionId, estudianteId, valor, observacion } = req.body;
+      if (!evaluacionId || !estudianteId || valor == null) {
+        return reply.status(400).send({ message: "evaluacionId, estudianteId y valor son requeridos" });
+      }
+
+      const nota = await app.prisma.nota.upsert({
+        where: { evaluacionId_estudianteId: { evaluacionId, estudianteId } },
+        update: { valor, observacion },
+        create: { evaluacionId, estudianteId, valor, observacion },
+        include: { evaluacion: { include: { oferta: { include: { materia: true } } } }, estudiante: { include: { perfil: true } } },
+      });
+
+      await app.prisma.auditoria.create({
+        data: {
+          perfilId: req.userId!,
+          accion: "CREATE",
+          entidad: "Nota",
+          entidadId: nota.id,
+          detalle: { evaluacionId, estudianteId, valor },
+        },
+      });
+
+      return nota;
+    },
+  );
+
+  // ─── Publicar recurso académico (docente / admin) ──────
+  app.post<{ Body: { ofertaId: string; titulo: string; descripcion?: string; tipoRecurso?: string; urlRecurso: string; publicado?: boolean } }>(
+    "/api/v1/recursos",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR", "DOCENTE"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+
+      const { ofertaId, titulo, descripcion, tipoRecurso = "ARCHIVO", urlRecurso, publicado = true } = req.body;
+      if (!ofertaId || !titulo || !urlRecurso) {
+        return reply.status(400).send({ message: "ofertaId, titulo y urlRecurso son requeridos" });
+      }
+
+      const recurso = await app.prisma.recursoMateria.create({
+        data: { ofertaId, titulo, descripcion, tipoRecurso: tipoRecurso as any, urlRecurso, publicado },
+        include: { oferta: { include: { materia: true } } },
+      });
+
+      await app.prisma.auditoria.create({
+        data: {
+          perfilId: req.userId!,
+          accion: "CREATE",
+          entidad: "RecursoMateria",
+          entidadId: recurso.id,
+          detalle: { ofertaId, titulo, publicado },
+        },
+      });
+
+      return recurso;
+    },
+  );
 }

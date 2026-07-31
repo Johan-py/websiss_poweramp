@@ -1,15 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Bell,
   Command,
   User,
   Settings,
-  LayoutDashboard,
-  Users,
-  ClipboardCheck,
-  FileText,
-  FileSpreadsheet,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,16 +23,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CommandDialog, CommandInput, CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { getNavForRole, getRoleLabel } from "@/config/navigation";
 
 interface TopbarProps {
   breadcrumbItems?: { label: string; href?: string }[];
 }
 
 export function Topbar({ breadcrumbItems }: TopbarProps) {
-  const { user, logout } = useAuth();
+  const { perfil, logout } = useAuth();
+  const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = useState(false);
 
-  const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
+  const roleNav = getNavForRole(perfil?.rol);
+  const initials = perfil ? `${perfil.nombre.slice(0, 1)}${perfil.apellido.slice(0, 1)}`.toUpperCase() : "??";
 
   return (
     <>
@@ -119,16 +118,16 @@ export function Topbar({ breadcrumbItems }: TopbarProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">{user?.email ?? "Usuario"}</span>
-                  <span className="text-xs text-muted-foreground">Administrador</span>
+                  <span className="text-sm font-medium">{perfil?.email ?? "Usuario"}</span>
+                  <span className="text-xs text-muted-foreground">{getRoleLabel(perfil?.rol)}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {}}>
+              <DropdownMenuItem onClick={() => navigate("/perfil")}>
                 <User className="mr-2 h-4 w-4" />
                 Perfil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {}}>
+              <DropdownMenuItem onClick={() => navigate("/configuracion")}>
                 <Settings className="mr-2 h-4 w-4" />
                 Configuración
               </DropdownMenuItem>
@@ -144,19 +143,13 @@ export function Topbar({ breadcrumbItems }: TopbarProps) {
           <CommandInput placeholder="Buscar páginas, acciones..." />
           <div className="max-h-72 overflow-y-auto p-2 scrollbar-thin">
             <CommandGroup heading="Navegación">
-              {[
-                { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-                { label: "Estudiantes", icon: Users, to: "/estudiantes" },
-                { label: "Inscripciones", icon: ClipboardCheck, to: "/inscripciones" },
-                { label: "Kardex", icon: FileText, to: "/kardex" },
-                { label: "Oferta Académica", icon: FileSpreadsheet, to: "/oferta-academica" },
-              ].map((item) => (
+              {roleNav.map((item) => (
                 <CommandItem
                   key={item.to}
                   value={item.label}
                   onSelect={() => {
                     setCommandOpen(false);
-                    window.location.hash = item.to;
+                    navigate(item.to);
                   }}
                 >
                   <item.icon className="h-4 w-4 text-muted-foreground" />

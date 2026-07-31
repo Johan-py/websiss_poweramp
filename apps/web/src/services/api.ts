@@ -55,6 +55,8 @@ export const api = {
   },
   notas: {
     list: () => fetchJson<any[]>("/notas"),
+    upsert: (data: { evaluacionId: string; estudianteId: string; valor: number; observacion?: string }) =>
+      fetchJson<any>("/notas", { method: "POST", body: JSON.stringify(data) }),
   },
   pagos: {
     list: () => fetchJson<any[]>("/pagos"),
@@ -64,9 +66,12 @@ export const api = {
   },
   recursos: {
     list: () => fetchJson<any[]>("/recursos"),
+    create: (data: { ofertaId: string; titulo: string; descripcion?: string; tipoRecurso?: string; urlRecurso: string; publicado?: boolean }) =>
+      fetchJson<any>("/recursos", { method: "POST", body: JSON.stringify(data) }),
   },
   auditoria: {
-    list: () => fetchJson<any[]>("/auditoria"),
+    list: (perfilId?: string) =>
+      fetchJson<any[]>(`/auditoria${perfilId ? `?perfilId=${perfilId}` : ""}`),
   },
   kardex: {
     get: (estudianteId: string) => fetchJson<any>(`/kardex/${estudianteId}`),

@@ -2,8 +2,12 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-export function ProtectedRoute() {
-  const { user, loading } = useAuth();
+interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
+  const { user, perfil, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +22,10 @@ export function ProtectedRoute() {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && perfil && !allowedRoles.includes(perfil.rol)) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

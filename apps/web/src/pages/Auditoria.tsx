@@ -2,20 +2,26 @@ import { useEffect, useState } from "react";
 import { Shield, LogIn, FileEdit, User, Settings } from "lucide-react";
 import { PageHeader } from "@/features/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 
 const iconMap: Record<string, any> = { auth: LogIn, create: FileEdit, update: FileEdit, config: Settings };
 
 export function AuditoriaPage() {
+  const { perfil } = useAuth();
+  const isStudent = perfil?.rol === "ESTUDIANTE";
   const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
-    api.auditoria.list().then(setLogs).catch(() => {});
-  }, []);
+    api.auditoria.list(isStudent ? perfil?.id : undefined).then(setLogs).catch(() => {});
+  }, [isStudent, perfil?.id]);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Auditoría" description="Registro de actividades del sistema" />
+      <PageHeader
+        title="Auditoría"
+        description={isStudent ? "Registro de las actividades realizadas en tu cuenta" : "Registro de actividades del sistema"}
+      />
       <div className="rounded-xl border bg-card divide-y">
         {logs.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">No hay registros de auditoría</p>
