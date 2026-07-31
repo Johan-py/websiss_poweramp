@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Login } from "@/pages/Login";
+import { NoticiasPage } from "@/pages/Noticias";
 import { Dashboard } from "@/pages/Dashboard";
 import { EstudiantesPage } from "@/pages/Estudiantes";
 import { DocentesPage } from "@/pages/Docentes";
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
+            <Route path="noticias" element={<NoticiasPage />} />
             <Route index element={<Dashboard />} />
             <Route element={<ProtectedRoute allowedRoles={GESTION} />}>
               <Route path="estudiantes" element={<EstudiantesPage />} />

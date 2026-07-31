@@ -14,6 +14,7 @@ import {
   UserCircle,
   Library,
   Clock,
+  Newspaper,
 } from "lucide-react";
 
 export type Rol = "ADMIN" | "COORDINADOR" | "DOCENTE" | "ESTUDIANTE";
@@ -28,6 +29,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
+  { to: "/noticias", label: "Noticias", icon: Newspaper, roles: ALL_ROLES },
   { to: "/", label: "Dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
   { to: "/estudiantes", label: "Estudiantes", icon: Users, roles: ["ADMIN", "COORDINADOR"] },
   { to: "/docentes", label: "Docentes", icon: GraduationCap, roles: ["ADMIN", "COORDINADOR"] },
@@ -47,19 +49,17 @@ export const navItems: NavItem[] = [
   { to: "/auditoria", label: "Auditoría", icon: Shield, roles: ALL_ROLES },
 ];
 
-const docenteShortcut: NavItem = { to: "/notas", label: "Subir Notas", icon: BarChart3, roles: ["DOCENTE"] };
-
 export function getNavForRole(rol?: string): NavItem[] {
   if (!rol) return [];
 
-  const items = navItems.filter((item) =>
-    item.roles.includes(rol as Rol)
-  );
+  const items = navItems
+    .filter((item) => item.roles.includes(rol as Rol))
+    .map((item) => ({ ...item })); // Copia para no modificar navItems
 
   if (rol === "DOCENTE") {
-    const index = items.findIndex((i) => i.to === "/notas");
-    if (index >= 0) {
-      items.splice(index + 1, 0, docenteShortcut);
+    const notas = items.find((item) => item.to === "/notas");
+    if (notas) {
+      notas.label = "Subir Notas";
     }
   }
 
@@ -69,7 +69,11 @@ export function getNavForRole(rol?: string): NavItem[] {
 export function getBreadcrumbs(rol: string | undefined, pathname: string) {
   const item = getNavForRole(rol).find((i) => i.to === pathname);
   if (!item) return [];
-  if (item.to === "/") return [{ label: item.label }];
+
+  if (item.to === "/") {
+    return [{ label: item.label }];
+  }
+
   return [{ label: item.label, href: item.to }];
 }
 
