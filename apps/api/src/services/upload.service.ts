@@ -1,6 +1,9 @@
 import { PrismaClient } from "@websiss/database";
 import { parse } from "csv-parse/sync";
+import { hashSync } from "bcryptjs";
 import type { CSVUploadResult } from "@websiss/shared-types";
+
+const DEFAULT_PASSWORD = hashSync("123456", 10);
 
 const REQUIRED_NOTA_COLUMNS = ["codigo_estudiante", "evaluacion_id", "valor"];
 const REQUIRED_ESTUDIANTE_COLUMNS = ["codigo_estudiante", "email", "nombre", "apellido", "cedula", "carrera_codigo"];
@@ -102,6 +105,7 @@ export const uploadCSVService = {
           update: {},
           create: {
             email: row.email,
+            password: DEFAULT_PASSWORD,
             nombre: row.nombre,
             apellido: row.apellido,
             cedula: row.cedula,

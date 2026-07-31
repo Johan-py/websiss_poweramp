@@ -16,9 +16,10 @@
     "@fastify/multipart": "^9.0.0",
     "@fastify/rate-limit": "^10.0.0",
     "@supabase/supabase-js": "^2.47.0",
+    "@websiss/config": "workspace:*",
     "@websiss/database": "workspace:*",
     "@websiss/shared-types": "workspace:*",
-    "@websiss/config": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "csv-parse": "^5.6.0",
     "dotenv": "^17.4.2",
     "fastify": "^5.1.0",
@@ -27,6 +28,7 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.10.0",
     "eslint": "^8.57.0",
     "tsx": "^4.19.0",

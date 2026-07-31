@@ -1,115 +1,96 @@
 import { FastifyInstance } from "fastify";
-import { createClient } from "@supabase/supabase-js";
-import { config } from "../utils/config.js";
-
-async function getSupabaseUserClient(token: string) {
-  const client = createClient(
-    config.SUPABASE_URL,
-    config.SUPABASE_ANON_KEY,
-    {
-      auth: {
-        persistSession: false,
-      },
-    },
-  );
-
-  await client.auth.setSession({
-    access_token: token,
-    refresh_token: "",
-  });
-
-  return client;
-}
-
-function getToken(request: any) {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Missing authorization token");
-  }
-
-  return authHeader.slice(7);
-}
+import { compare } from "bcryptjs";
+import { signToken } from "../plugins/auth.js";
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post(
-    "/mfa/enroll",
-    { preHandler: [app.authenticate] },
-    async (request, reply) => {
-      const token = getToken(request);
-      const sb = await getSupabaseUserClient(token);
+  app.post("/login", async (request, reply) => {
+    const { email, password } = request.body as {
+      email: string;
+      password: string;
+    };
 
-      const { data, error } = await sb.auth.mfa.enroll({
-        factorType: "totp",
-      });
+    if (!email || !password) {
+      return reply.status(400).send({ message: "Email y contraseña son requeridos" });
+    }
 
-      if (error) return reply.status(400).send(error);
+    const perfil = await app.prisma.perfil.findUnique({
+      where: { email },
+      include: {
+        estudiante: { include: { carrera: true } },
+        docente: true,
+      },
+    });
 
-      return reply.send(data);
-    },
-  );
+    if (!perfil || !perfil.activo) {
+      return reply.status(401).send({ message: "Credenciales inválidas" });
+    }
 
+    const valid = await compare(password, perfil.password);
+    if (!valid) {
+      return reply.status(401).send({ message: "Credenciales inválidas" });
+    }
 
-  app.post(
-    "/mfa/challenge",
-    { preHandler: [app.authenticate] },
-    async (request, reply) => {
-      const token = getToken(request);
-      const sb = await getSupabaseUserClient(token);
+    const token = await signToken({ sub: perfil.id, email: perfil.email, rol: perfil.rol });
 
-      const { factorId } = request.body as {
-        factorId: string;
-      };
+    await app.prisma.auditoria.create({
+      data: {
+        perfilId: perfil.id,
+        accion: "LOGIN",
+        entidad: "Perfil",
+        entidadId: perfil.id,
+        detalle: { email: perfil.email, rol: perfil.rol },
+      },
+    });
 
-      const { data, error } = await sb.auth.mfa.challenge({
-        factorId,
-      });
-
-      if (error) return reply.status(400).send(error);
-
-      return reply.send(data);
-    },
-  );
-
-
-  app.post(
-    "/mfa/verify",
-    { preHandler: [app.authenticate] },
-    async (request, reply) => {
-      const token = getToken(request);
-      const sb = await getSupabaseUserClient(token);
-
-      const { factorId, challengeId, code } = request.body as {
-        factorId: string;
-        challengeId: string;
-        code: string;
-      };
-
-      const { data, error } = await sb.auth.mfa.verify({
-        factorId,
-        challengeId,
-        code,
-      });
-
-      if (error) return reply.status(400).send(error);
-
-      return reply.send(data);
-    },
-  );
-
+    return reply.send({
+      token,
+      perfil: {
+        id: perfil.id,
+        email: perfil.email,
+        nombre: perfil.nombre,
+        apellido: perfil.apellido,
+        cedula: perfil.cedula,
+        telefono: perfil.telefono,
+        direccion: perfil.direccion,
+        avatarUrl: perfil.avatarUrl,
+        rol: perfil.rol,
+        activo: perfil.activo,
+        estudiante: perfil.estudiante,
+        docente: perfil.docente,
+      },
+    });
+  });
 
   app.get(
-    "/mfa/factors",
+    "/me",
     { preHandler: [app.authenticate] },
     async (request, reply) => {
-      const token = getToken(request);
-      const sb = await getSupabaseUserClient(token);
+      const perfil = await app.prisma.perfil.findFirst({
+        where: { id: request.userId },
+        include: {
+          estudiante: { include: { carrera: true } },
+          docente: true,
+        },
+      });
 
-      const { data, error } = await sb.auth.mfa.listFactors();
+      if (!perfil) {
+        return reply.status(404).send({ message: "Perfil no encontrado" });
+      }
 
-      if (error) return reply.status(400).send(error);
-
-      return reply.send(data);
+      return reply.send({
+        id: perfil.id,
+        email: perfil.email,
+        nombre: perfil.nombre,
+        apellido: perfil.apellido,
+        cedula: perfil.cedula,
+        telefono: perfil.telefono,
+        direccion: perfil.direccion,
+        avatarUrl: perfil.avatarUrl,
+        rol: perfil.rol,
+        activo: perfil.activo,
+        estudiante: perfil.estudiante,
+        docente: perfil.docente,
+      });
     },
   );
 }

@@ -1,18 +1,30 @@
-const BASE = `${import.meta.env.VITE_API_URL}/api/v1`;
+const BASE = `${import.meta.env.VITE_API_URL ?? ""}/api/v1`;
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const token = localStorage.getItem("ws_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch {}
+  return headers;
+}
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: { ...getAuthHeaders(), ...init?.headers },
     ...init,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Error ${res.status}`);
+    throw new Error(body.message ?? body.error ?? `Error ${res.status}`);
   }
   return res.json();
 }
 
 export const api = {
+  auth: {
+    me: () => fetchJson<any>("/auth/me"),
+  },
   carreras: {
     list: () => fetchJson<any[]>("/carreras"),
     get: (id: string) => fetchJson<any>(`/carreras/${id}`),

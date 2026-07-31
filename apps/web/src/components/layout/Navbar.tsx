@@ -29,7 +29,7 @@ export function Navbar() {
           <DropdownMenuLabel>
             <div className="flex flex-col">
               <span className="text-sm font-medium">{user?.email}</span>
-              <span className="text-xs text-muted-foreground">{user?.role ?? "Usuario"}</span>
+              <span className="text-xs text-muted-foreground">Usuario</span>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

@@ -31,6 +31,7 @@ datasource db {
 model Perfil {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
+  password  String
   nombre    String
   apellido  String
   cedula    String   @unique

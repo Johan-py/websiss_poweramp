@@ -1,4 +1,5 @@
 import { PrismaClient, Rol, Modalidad, TipoAula, TipoRecurso, TipoEvaluacion, EstadoInscripcion, MetodoPago, EstadoPago, TipoEvento } from '@prisma/client';
+import { hashSync } from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -37,9 +38,12 @@ async function main() {
   // ============================================
   console.log('📝 Creando perfiles...');
 
+  const pwd = hashSync('123456', 10);
+
   const perfilesData = [
     {
       email: 'admin@universidad.edu',
+      password: pwd,
       nombre: 'Carlos',
       apellido: 'Rodríguez',
       cedula: '1234567890',
@@ -50,6 +54,7 @@ async function main() {
     },
     {
       email: 'coordinador@universidad.edu',
+      password: pwd,
       nombre: 'María',
       apellido: 'González',
       cedula: '0987654321',
@@ -60,6 +65,7 @@ async function main() {
     },
     {
       email: 'docente1@universidad.edu',
+      password: pwd,
       nombre: 'Pedro',
       apellido: 'Martínez',
       cedula: '1122334455',
@@ -70,6 +76,7 @@ async function main() {
     },
     {
       email: 'docente2@universidad.edu',
+      password: pwd,
       nombre: 'Ana',
       apellido: 'López',
       cedula: '2233445566',
@@ -80,6 +87,7 @@ async function main() {
     },
     {
       email: 'docente3@universidad.edu',
+      password: pwd,
       nombre: 'Roberto',
       apellido: 'Sánchez',
       cedula: '3344556677',
@@ -90,6 +98,7 @@ async function main() {
     },
     {
       email: 'estudiante1@universidad.edu',
+      password: pwd,
       nombre: 'Juan',
       apellido: 'Pérez',
       cedula: '4455667788',
@@ -100,6 +109,7 @@ async function main() {
     },
     {
       email: 'estudiante2@universidad.edu',
+      password: pwd,
       nombre: 'Laura',
       apellido: 'Gómez',
       cedula: '5566778899',
@@ -110,6 +120,7 @@ async function main() {
     },
     {
       email: 'estudiante3@universidad.edu',
+      password: pwd,
       nombre: 'Andrés',
       apellido: 'Mendoza',
       cedula: '6677889900',
@@ -120,6 +131,7 @@ async function main() {
     },
     {
       email: 'estudiante4@universidad.edu',
+      password: pwd,
       nombre: 'Sofía',
       apellido: 'Ramírez',
       cedula: '7788990011',

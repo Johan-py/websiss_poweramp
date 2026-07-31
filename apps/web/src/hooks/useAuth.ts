@@ -1,34 +1,124 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { useState, useEffect, useCallback } from "react";
+
+const TOKEN_KEY = "ws_token";
+const PERFIL_KEY = "ws_perfil";
+
+function getStoredToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {}
+}
+
+function getStoredPerfil(): PerfilData | null {
+  try {
+    const raw = localStorage.getItem(PERFIL_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredPerfil(perfil: PerfilData | null) {
+  try {
+    if (perfil) localStorage.setItem(PERFIL_KEY, JSON.stringify(perfil));
+    else localStorage.removeItem(PERFIL_KEY);
+  } catch {}
+}
+
+export interface PerfilData {
+  id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  telefono: string | null;
+  direccion: string | null;
+  avatarUrl: string | null;
+  rol: "ADMIN" | "COORDINADOR" | "DOCENTE" | "ESTUDIANTE";
+  activo: boolean;
+  estudiante?: {
+    id: string;
+    codigoEstudiante: string;
+    carrera?: { id: string; nombre: string; codigo: string };
+  } | null;
+  docente?: {
+    id: string;
+    codigoDocente: string;
+    especialidad: string | null;
+  } | null;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [perfil, setPerfil] = useState<PerfilData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
+    const token = getStoredToken();
+    if (!token) {
       setLoading(false);
-    };
-    getSession();
+      return;
+    }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => listener?.subscription.unsubscribe();
+    fetch("/api/v1/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Token inválido");
+        return res.json();
+      })
+      .then((perfilData) => {
+        setUser({ email: perfilData.email });
+        setPerfil(perfilData);
+        setStoredPerfil(perfilData);
+      })
+      .catch(() => {
+        setStoredToken(null);
+        setStoredPerfil(null);
+        setUser(null);
+        setPerfil(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-  };
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await fetch("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-  };
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || "Credenciales inválidas");
+    }
 
-  return { user, loading, login, logout };
+    const data = await res.json();
+    setStoredToken(data.token);
+    setStoredPerfil(data.perfil);
+    setUser({ email: data.perfil.email });
+    setPerfil(data.perfil);
+  }, []);
+
+  const logout = useCallback(() => {
+    setStoredToken(null);
+    setStoredPerfil(null);
+    setUser(null);
+    setPerfil(null);
+  }, []);
+
+  const getAccessToken = useCallback((): string | null => {
+    return getStoredToken();
+  }, []);
+
+  return { user, perfil, loading, login, logout, getAccessToken };
 }
