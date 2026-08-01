@@ -28,6 +28,14 @@ export const api = {
   carreras: {
     list: () => fetchJson<any[]>("/carreras"),
     get: (id: string) => fetchJson<any>(`/carreras/${id}`),
+    create: (data: {
+      codigo: string;
+      nombre: string;
+      descripcion?: string;
+      modalidad?: "PRESENCIAL" | "SEMIPRESENCIAL" | "VIRTUAL";
+      duracionSemestres: number;
+      activo?: boolean;
+    }) => fetchJson<any>("/carreras", { method: "POST", body: JSON.stringify(data) }),
   },
   periodos: {
     list: () => fetchJson<any[]>("/periodos"),

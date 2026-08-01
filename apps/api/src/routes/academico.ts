@@ -71,6 +71,53 @@ export async function academicoRoutes(app: FastifyInstance) {
     return c;
   });
 
+  app.post<{
+    Body: {
+      codigo: string;
+      nombre: string;
+      descripcion?: string;
+      modalidad?: "PRESENCIAL" | "SEMIPRESENCIAL" | "VIRTUAL";
+      duracionSemestres: number;
+      activo?: boolean;
+    };
+  }>(
+    "/api/v1/carreras",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+      const { codigo, nombre, descripcion, modalidad, duracionSemestres, activo } = req.body;
+      if (!codigo?.trim() || !nombre?.trim() || duracionSemestres == null) {
+        return reply.status(400).send({ message: "codigo, nombre y duracionSemestres son requeridos" });
+      }
+      if (Number.isNaN(Number(duracionSemestres)) || Number(duracionSemestres) <= 0) {
+        return reply.status(400).send({ message: "La duración debe ser mayor a 0 semestres" });
+      }
+      try {
+        const carrera = await app.prisma.carrera.create({
+          data: {
+            codigo: codigo.trim().toUpperCase(),
+            nombre: nombre.trim(),
+            descripcion: descripcion?.trim() || null,
+            modalidad: modalidad ?? "PRESENCIAL",
+            duracionSemestres: Number(duracionSemestres),
+            activo: activo ?? true,
+          },
+        });
+        await app.prisma.auditoria.create({
+          data: { perfilId: req.userId!, accion: "CREATE", entidad: "Carrera", entidadId: carrera.id, detalle: { codigo, nombre, modalidad, duracionSemestres } },
+        });
+        return reply.status(201).send(carrera);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          return reply.status(409).send({ message: "Ya existe una carrera con ese código" });
+        }
+        return reply.status(500).send({ message: "No se pudo crear la carrera" });
+      }
+    },
+  );
+
   // ─── Periodos ───────────────────────────────────────────
   app.get("/api/v1/periodos", async () => {
     return app.prisma.periodo.findMany({ orderBy: { fechaInicio: "desc" } });

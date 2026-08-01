@@ -3,6 +3,7 @@ import { Plus, Library, BookOpen, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
+import { NuevaCarreraDialog } from "@/features/NuevaCarreraDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
 import {
@@ -45,10 +46,13 @@ export function CarrerasPage() {
   const [detalle, setDetalle] = useState<CarreraDetalle | null>(null);
   const [cargandoMalla, setCargandoMalla] = useState(false);
   const [abierto, setAbierto] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
     api.carreras.list().then(setCarreras).catch(() => {});
-  }, []);
+  };
+
+  useEffect(load, []);
 
   const abrirMalla = async (c: Carrera) => {
     setAbierto(true);
@@ -77,9 +81,10 @@ export function CarrerasPage() {
     <div className="space-y-6">
       <PageHeader title="Carreras" description="Planes de estudio ofrecidos">
         {perfil?.rol !== "ESTUDIANTE" && (
-          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Carrera</Button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> Nueva Carrera</Button>
         )}
       </PageHeader>
+      {perfil?.rol !== "ESTUDIANTE" && <NuevaCarreraDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={load} />}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {carreras.map((c) => (
           <button
