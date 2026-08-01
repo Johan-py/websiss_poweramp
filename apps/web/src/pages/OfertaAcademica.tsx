@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
+import { NuevaOfertaDialog } from "@/features/NuevaOfertaDialog";
 import { cn } from "@/lib/utils";
 import type { Column } from "@/features/DataTable";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,8 +85,10 @@ export function OfertaAcademicaPage() {
   const rol = perfil?.rol;
   const [rows, setRows] = useState<OfertaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
     api.ofertas.list().then((data) => {
       const filtered = rol === "DOCENTE"
         ? data.filter((o: any) => o.docenteId === perfil?.docente?.id)
@@ -108,7 +111,9 @@ export function OfertaAcademicaPage() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [rol, perfil?.docente?.id]);
+  };
+
+  useEffect(load, [rol, perfil?.docente?.id]);
 
   const canCreate = rol === "ADMIN" || rol === "COORDINADOR";
 
@@ -119,10 +124,11 @@ export function OfertaAcademicaPage() {
         description={rol === "DOCENTE" ? "Materias que impartes este periodo" : "Materias ofertadas por periodo"}
       >
         {canCreate && (
-          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Oferta</Button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> Nueva Oferta</Button>
         )}
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable searchPlaceholder="Buscar materia o docente..." loading={loading} pageSize={8} />
+      {canCreate && <NuevaOfertaDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={load} />}
     </div>
   );
 }

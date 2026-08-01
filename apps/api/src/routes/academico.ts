@@ -241,6 +241,11 @@ export async function academicoRoutes(app: FastifyInstance) {
     });
   });
 
+  // ─── Aulas ──────────────────────────────────────────────
+  app.get("/api/v1/aulas", async () => {
+    return app.prisma.aula.findMany({ orderBy: { nombre: "asc" } });
+  });
+
   // ─── Ofertas Académicas ────────────────────────────────
   app.get("/api/v1/ofertas", async () => {
     return app.prisma.ofertaAcademica.findMany({
@@ -248,6 +253,58 @@ export async function academicoRoutes(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
     });
   });
+
+  app.post<{
+    Body: {
+      materiaId: string;
+      docenteId: string;
+      periodoId: string;
+      aulaId?: string;
+      cupoMaximo?: number;
+      seccion?: string;
+      modalidad?: "PRESENCIAL" | "SEMIPRESENCIAL" | "VIRTUAL";
+      horario?: { dia?: string; hora_inicio?: string; hora_fin?: string };
+    };
+  }>(
+    "/api/v1/ofertas",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+      const { materiaId, docenteId, periodoId, aulaId, cupoMaximo, seccion, modalidad, horario } = req.body;
+      if (!materiaId || !docenteId || !periodoId) {
+        return reply.status(400).send({ message: "materiaId, docenteId y periodoId son requeridos" });
+      }
+      const cupo = Math.max(1, Number(cupoMaximo) || 30);
+      const hasHorario = Boolean(horario && (horario.dia || horario.hora_inicio || horario.hora_fin));
+      try {
+        const oferta = await app.prisma.ofertaAcademica.create({
+          data: {
+            materiaId,
+            docenteId,
+            periodoId,
+            aulaId: aulaId || null,
+            cupoMaximo: cupo,
+            cupoDisponible: cupo,
+            seccion: seccion?.trim() || "A",
+            modalidad: modalidad ?? "PRESENCIAL",
+            horario: hasHorario ? horario : undefined,
+          },
+          include: ofertaInclude,
+        });
+        await app.prisma.auditoria.create({
+          data: { perfilId: req.userId!, accion: "CREATE", entidad: "OfertaAcademica", entidadId: oferta.id, detalle: { materiaId, docenteId, periodoId, cupo } },
+        });
+        return reply.status(201).send(oferta);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          return reply.status(409).send({ message: "Ya existe una oferta con esos datos" });
+        }
+        return reply.status(500).send({ message: "No se pudo crear la oferta académica" });
+      }
+    }
+  );
 
   // ─── Inscripciones ──────────────────────────────────────
   app.get(

@@ -65,8 +65,21 @@ export const api = {
   materias: {
     list: () => fetchJson<any[]>("/materias"),
   },
+  aulas: {
+    list: () => fetchJson<any[]>("/aulas"),
+  },
   ofertas: {
     list: () => fetchJson<any[]>("/ofertas"),
+    create: (data: {
+      materiaId: string;
+      docenteId: string;
+      periodoId: string;
+      aulaId?: string;
+      cupoMaximo?: number;
+      seccion?: string;
+      modalidad?: "PRESENCIAL" | "SEMIPRESENCIAL" | "VIRTUAL";
+      horario?: { dia?: string; hora_inicio?: string; hora_fin?: string };
+    }) => fetchJson<any>("/ofertas", { method: "POST", body: JSON.stringify(data) }),
   },
   inscripciones: {
     list: () => fetchJson<any[]>("/inscripciones"),
