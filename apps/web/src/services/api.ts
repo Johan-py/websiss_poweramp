@@ -64,6 +64,16 @@ export const api = {
   },
   materias: {
     list: () => fetchJson<any[]>("/materias"),
+    create: (data: {
+      carreraId: string;
+      codigo: string;
+      nombre: string;
+      descripcion?: string;
+      creditos: number;
+      horasTeoricas?: number;
+      horasPracticas?: number;
+      ciclo: number;
+    }) => fetchJson<any>("/materias", { method: "POST", body: JSON.stringify(data) }),
   },
   aulas: {
     list: () => fetchJson<any[]>("/aulas"),

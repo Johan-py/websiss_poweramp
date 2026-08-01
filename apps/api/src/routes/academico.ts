@@ -241,6 +241,58 @@ export async function academicoRoutes(app: FastifyInstance) {
     });
   });
 
+  app.post<{
+    Body: {
+      carreraId: string;
+      codigo: string;
+      nombre: string;
+      descripcion?: string;
+      creditos: number;
+      horasTeoricas?: number;
+      horasPracticas?: number;
+      ciclo: number;
+    };
+  }>(
+    "/api/v1/materias",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      if (!["ADMIN", "COORDINADOR"].includes(req.userRole ?? "")) {
+        return reply.status(403).send({ message: "No autorizado" });
+      }
+      const { carreraId, codigo, nombre, descripcion, creditos, horasTeoricas, horasPracticas, ciclo } = req.body;
+      if (!carreraId || !codigo?.trim() || !nombre?.trim() || creditos == null || ciclo == null) {
+        return reply.status(400).send({ message: "carreraId, codigo, nombre, creditos y ciclo son requeridos" });
+      }
+      if (Number.isNaN(Number(creditos)) || Number(creditos) <= 0) {
+        return reply.status(400).send({ message: "Los créditos deben ser mayor a 0" });
+      }
+      try {
+        const materia = await app.prisma.materia.create({
+          data: {
+            carreraId,
+            codigo: codigo.trim().toUpperCase(),
+            nombre: nombre.trim(),
+            descripcion: descripcion?.trim() || null,
+            creditos: Number(creditos),
+            horasTeoricas: Number(horasTeoricas) || 0,
+            horasPracticas: Number(horasPracticas) || 0,
+            ciclo: Number(ciclo),
+          },
+          include: { carrera: true },
+        });
+        await app.prisma.auditoria.create({
+          data: { perfilId: req.userId!, accion: "CREATE", entidad: "Materia", entidadId: materia.id, detalle: { codigo, nombre, carreraId, creditos } },
+        });
+        return reply.status(201).send(materia);
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          return reply.status(409).send({ message: "Ya existe una materia con ese código" });
+        }
+        return reply.status(500).send({ message: "No se pudo crear la materia" });
+      }
+    },
+  );
+
   // ─── Aulas ──────────────────────────────────────────────
   app.get("/api/v1/aulas", async () => {
     return app.prisma.aula.findMany({ orderBy: { nombre: "asc" } });

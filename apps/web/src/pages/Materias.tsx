@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/features/PageHeader";
 import { DataTable } from "@/features/DataTable";
+import { NuevaMateriaDialog } from "@/features/NuevaMateriaDialog";
 import type { Column } from "@/features/DataTable";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/services/api";
@@ -38,8 +39,10 @@ export function MateriasPage() {
   const { perfil } = useAuth();
   const [rows, setRows] = useState<MateriaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
     api.materias.list().then((data) => {
       setRows(
         data.map((m: any) => ({
@@ -53,16 +56,19 @@ export function MateriasPage() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(load, []);
 
   return (
     <div className="space-y-6">
       <PageHeader title="Materias" description="Catálogo de materias del plan de estudios">
         {perfil?.rol !== "ESTUDIANTE" && (
-          <Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Nueva Materia</Button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-1.5" /> Nueva Materia</Button>
         )}
       </PageHeader>
       <DataTable columns={columns} data={rows} keyExtractor={(item) => item.id} searchable searchPlaceholder="Buscar materia..." loading={loading} pageSize={8} />
+      {perfil?.rol !== "ESTUDIANTE" && <NuevaMateriaDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={load} />}
     </div>
   );
 }
