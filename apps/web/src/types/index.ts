@@ -95,3 +95,33 @@ export interface Pago {
   estado: "pendiente" | "pagado" | "vencido" | "cancelado";
   comprobante?: string;
 }
+
+export type PerfilRol = "ADMIN" | "COORDINADOR" | "DOCENTE" | "ESTUDIANTE";
+
+export interface PerfilData {
+  id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  telefono: string | null;
+  direccion: string | null;
+  avatarUrl: string | null;
+  rol: PerfilRol;
+  activo: boolean;
+  estudiante?: {
+    id: string;
+    codigoEstudiante: string;
+    carrera?: { id: string; nombre: string; codigo: string };
+  } | null;
+  docente?: {
+    id: string;
+    codigoDocente: string;
+    especialidad: string | null;
+  } | null;
+}
+
+export interface LoginResponse {
+  token: string;
+  perfil: PerfilData;
+}

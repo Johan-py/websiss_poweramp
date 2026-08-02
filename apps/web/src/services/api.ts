@@ -1,4 +1,16 @@
+import type { LoginResponse, PerfilData } from "@/types";
+
 const BASE = `${import.meta.env.VITE_API_URL ?? ""}/api/v1`;
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -15,15 +27,23 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? body.error ?? `Error ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const message =
+      typeof body.message === "string"
+        ? body.message
+        : typeof body.error === "string"
+          ? body.error
+          : `Error ${res.status}`;
+    throw new ApiError(message, res.status);
   }
   return res.json();
 }
 
 export const api = {
   auth: {
-    me: () => fetchJson<any>("/auth/me"),
+    login: (data: { email: string; password: string }) =>
+      fetchJson<LoginResponse>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+    me: () => fetchJson<PerfilData>("/auth/me"),
   },
   carreras: {
     list: () => fetchJson<any[]>("/carreras"),
