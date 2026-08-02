@@ -1,13 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "git": {
-    "deploymentEnabled": {
-      "apps/web": true
-    }
-  },
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @websiss/web run build",
-  "outputDirectory": "apps/web/dist",
-  "installCommand": null,
-  "framework": "vite",
-  "devCommand": "pnpm --filter @websiss/web run dev"
+  "framework": "vite"
 }
